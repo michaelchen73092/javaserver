@@ -11,6 +11,8 @@ import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.ItemCollection;
 import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
+import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
@@ -26,9 +28,15 @@ import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 public class dynamoDBManager {
 	public final DynamoDB dynamoDB = new DynamoDB(new AmazonDynamoDBClient(
 	            new ProfileCredentialsProvider("H:\\AWSCredentials.properties","default")));
-
+	private static dynamoDBManager inst = null;
     private static final Logger logger = LogManager.getLogger(dynamoDBManager.class);
-	public String conCat(String delit,ArrayList<String> strs){
+	public static dynamoDBManager instance() {
+		if(inst==null){
+			inst = new dynamoDBManager();
+		}
+		return inst;
+	}
+    public String conCat(String delit,ArrayList<String> strs){
 		Integer count =0;
 		String return_str = "";
 		Iterator<String> ite = strs.iterator();
@@ -117,10 +125,21 @@ public class dynamoDBManager {
 		results = table.query(querySpec);
 		assert(results != null);
 		//if(results != null) System.out.println("results!=null");
+		return results;
+	}
+	public ItemCollection<ScanOutcome> Scan(String tabName){
+		ItemCollection<ScanOutcome> results = null;
+		Table table = dynamoDB.getTable(tabName);
+		assert(Constants.instance()!=null);
+		ScanSpec scanSpec = new ScanSpec();
+		//System.out.println(key1);
+		//System.out.println(key2);
+		results = table.scan(scanSpec);
+		assert(results != null);
+		//if(results != null) System.out.println("results!=null");
 		
 		return results;
 	}
-	
 
 
 }

@@ -32,7 +32,7 @@ public class TestThread {
 		//System.out.printf("triiger is %b\n",AwsSdkMetrics.enableDefaultMetrics());
 		//System.out.println(AwsSdkMetrics.CLOUDWATCH_REGION); 
 		//System.out.printf(" defaultMetric is %b\n",AwsSdkMetrics.isMetricsEnabled());
-		Item item = null;
+		/*Item item = null;
 		dynamoDBManager dynamoDB_inst = new dynamoDBManager();
 		ItemCollection<QueryOutcome> results = dynamoDB_inst.Query("APNs","Chien-Lin","zero064@gmail.com", Op.eq);
 		Iterator<Item> iterator = results.iterator();
@@ -48,8 +48,9 @@ public class TestThread {
 		assert(token != null);
 		System.out.println("sample token: "+TokenUtil.sanitizeTokenString("<efc7492 bdbd8209>"));
 		testThread(job);
-		System.out.println("the end");
-
+		System.out.println("the end");*/
+		Timer timer = new Timer();
+		timer.schedule(new ScheduleTask(1,300000), 20, 600000);
 		/*Thread.sleep(20000);
 		System.out.println("test alive");
 		threadManager.instance().stopThread();

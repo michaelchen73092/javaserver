@@ -103,7 +103,9 @@ public class dynamoDBthread extends Thread {
 		BigDecimal piv_num = new BigDecimal(0);
 		Integer hashkey = date.get(Calendar.DAY_OF_MONTH);
 		String sortKey = toSortKey(date.get(Calendar.HOUR_OF_DAY), date.get(Calendar.MINUTE)) ;
-			//iterate through all APNs in job
+		BigDecimal piv_month = new BigDecimal(date.get(Calendar.MONTH)+1);
+		BigDecimal piv_year = new BigDecimal(date.get(Calendar.YEAR));
+		//iterate through all APNs in job
 			//Thie item is from APNs table
 		System.out.println("before get in while loop");
 			while(iterator.hasNext()){
@@ -123,8 +125,17 @@ public class dynamoDBthread extends Thread {
 					Item app_queue = it_app.next();
 					BigDecimal open = (BigDecimal) app_queue.get("open");
 					BigDecimal reserv = (BigDecimal) app_queue.get("reservation");
+					BigDecimal month =(BigDecimal) app_queue.get("month");
+					BigDecimal year = (BigDecimal) app_queue.get("year");
 					List<String> queue = (List<String>) app_queue.get("queue");
-					System.out.println("before get in compareTo");
+					//System.out.println("before get in compareTo");
+					if(year.compareTo(piv_year)!=0 || month.compareTo(piv_month)!=0){
+						System.out.println("Incorrect Month year");
+						System.out.printf("Suppose year:%s month:%s\n",piv_year.toString(),piv_month.toString());
+						System.out.printf("Recorded year:%s month:%s\n",year.toString(),month.toString());
+						//issue request to another server to rewrite the entry
+						break;
+					}
 					if(reserv.compareTo(piv_num)>0){
 						String message = threadName+":"+firstname+" "+lastname+",you have appoinments in next "+ new Integer(int_arry[0]).toString()+" minutes";
 						System.out.println(threadName+":"+message);
@@ -163,7 +174,7 @@ public class dynamoDBthread extends Thread {
 					logger.info(threadName+" logging!");
 				}
 			}*/
-			
+			return;
 			
 			
 
