@@ -9,6 +9,7 @@ import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
 public class ScheduleTask extends TimerTask{
 	private int num;
 	private int sleep;
+	private Integer[] count;
 	public void run(){
 		System.out.println("initialization time:"+(new Date()).toString());
 		Item item = null;
@@ -19,6 +20,20 @@ public class ScheduleTask extends TimerTask{
 		boolean flag =false;
 		ArrayList<HashSet<Item>> jobs = null;
 		HashSet<Item> job = null;
+		
+		for(int i=0;i<3000;i++){
+			synchronized (this.count) {
+				System.out.printf("inner count: %d\n",this.count[0]);
+				this.count[0]++;
+			}
+			try{
+				Thread.sleep(3);
+			}catch(Exception e){
+				System.out.println(e.getMessage());
+			}
+		}
+		return;
+		/*
 		while(!flag){
 			results = dynamoDB_inst.Scan("APNs");
 			iterator = results.iterator();
@@ -65,9 +80,11 @@ public class ScheduleTask extends TimerTask{
 			 System.out.println(exception.getMessage());
 			 exception.getStackTrace();
 		 }
+		 */
 	}
-	public ScheduleTask(int num,int sleep){
+	public ScheduleTask(int num,int sleep,Integer[] count){
 		this.num = num;
 		this.sleep = sleep;
+		this.count = count;
 	}
 }

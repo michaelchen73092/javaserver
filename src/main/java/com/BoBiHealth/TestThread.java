@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 
 
 public class TestThread {
+	public static Integer[] test_count = null;
 	public static void main(String args[])throws Exception{
 		//AwsSdkMetrics.setCredentialProvider(new ProfileCredentialsProvider("H:\\AWSCredentials.properties","default"));
 		//AwsSdkMetrics.setMetricNameSpace("TestMetric");
@@ -49,9 +50,21 @@ public class TestThread {
 		System.out.println("sample token: "+TokenUtil.sanitizeTokenString("<efc7492 bdbd8209>"));
 		testThread(job);
 		System.out.println("the end");*/
+		test_count = new Integer[1];
+		test_count[0] = 0;
 		Timer timer = new Timer();
-		timer.schedule(new ScheduleTask(1,300000), 20, 600000);
-		/*Thread.sleep(20000);
+		timer.schedule(new ScheduleTask(1,300000,test_count), 2, 600000);
+		System.out.println("Imediately");
+		Thread.sleep(100);
+		for(int i=0;i<2000;i++){
+			synchronized (test_count[0]) {
+				System.out.printf("In upper side count: %d\n", test_count[0]);
+				test_count[0]++;
+			}
+			Thread.sleep(3);
+
+		}
+			/*Thread.sleep(20000);
 		System.out.println("test alive");
 		threadManager.instance().stopThread();
 		Thread.sleep(1000);

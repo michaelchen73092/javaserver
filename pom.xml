@@ -5,7 +5,7 @@
     <artifactId>BoBiHealth</artifactId>
     <packaging>jar</packaging>
     <name>BoBiHealth</name>
-    <url>https://www.github.com/awslabs/aws-dynamodb-examples</url>
+    <url>https://github.com/michaelchen73092/javaserver</url>
     <properties>
         <test.extra.jvm.opts>-javaagent:${basedir}/target/jamm-${jamm.version}.jar </test.extra.jvm.opts>
         <default.test.jvm.opts>-Xms256m -Xmx1280m -XX:+HeapDumpOnOutOfMemoryError -ea ${test.extra.jvm.opts} </default.test.jvm.opts>
@@ -28,6 +28,7 @@
         <commons.logging.version>1.1.1</commons.logging.version>
         <sqlite4java.version>1.0.392</sqlite4java.version>
         <hamcrest.version>1.3</hamcrest.version>
+        <jettyVersion>9.3.11.M0</jettyVersion>
      	</properties>
     <developers>
         <developer>
@@ -44,7 +45,7 @@
             <url>https://www.linkedin.com/in/amcpatrix/en</url>
         </developer>
     </developers>
-    <inceptionYear>2012</inceptionYear>
+    <inceptionYear>2016</inceptionYear>
     <licenses>
         <license>
             <name>The Apache Software License, Version 2.0</name>
@@ -54,6 +55,41 @@
 
     <!-- Libraries -->
     <dependencies>
+    <!-- https://mvnrepository.com/artifact/org.json/json -->
+		<dependency>
+		    <groupId>org.json</groupId>
+		    <artifactId>json</artifactId>
+		    <version>20160212</version>
+		</dependency>
+    
+    	<!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
+		<dependency>
+		    <groupId>org.apache.httpcomponents</groupId>
+		    <artifactId>httpclient</artifactId>
+		    <version>4.5.2</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.apache.httpcomponents</groupId>
+		    <artifactId>httpmime</artifactId>
+		    <version>4.5.2</version>
+		</dependency>
+    	<!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-security -->
+		<dependency>
+		    <groupId>org.eclipse.jetty</groupId>
+		    <artifactId>jetty-security</artifactId>
+		    <version>${jettyVersion}</version>
+		</dependency>
+    	
+		<dependency>
+		  <groupId>org.eclipse.jetty</groupId>
+		  <artifactId>jetty-util</artifactId>
+		  <version>${jettyVersion}</version>
+		</dependency>
+		 <dependency>
+			  <groupId>org.eclipse.jetty</groupId>
+			  <artifactId>jetty-server</artifactId>
+			  <version>${jettyVersion}</version>
+		</dependency>	
     	<dependency>
 			<groupId>com.relayrides</groupId>
 			<artifactId>pushy</artifactId>
@@ -94,6 +130,18 @@
             <artifactId>slf4j-log4j12</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/log4j/log4j -->
+		<dependency>
+		    <groupId>log4j</groupId>
+		    <artifactId>log4j</artifactId>
+		    <version>1.2.17</version>
+		</dependency>
+        <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
+		<dependency>
+		    <groupId>org.slf4j</groupId>
+		    <artifactId>slf4j-api</artifactId>
+		    <version>1.7.21</version>
+		</dependency>
         
         <!-- https://mvnrepository.com/artifact/org.mortbay.jetty.alpn/alpn-boot -->
 		<dependency>
@@ -106,11 +154,6 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>${maven.resources.version}</version>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
