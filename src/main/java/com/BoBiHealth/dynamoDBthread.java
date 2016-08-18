@@ -115,6 +115,7 @@ public class dynamoDBthread extends Thread {
 					System.out.println(exception.getMessage());
 					return;
 				}
+				CollectionWrapper<ItemV2> results = task.getResult();
 				Iterator<ItemV2> it_app = results.iterator();
 				/*int count = results.getAccumulatedItemCount();
 				if(count==0){
