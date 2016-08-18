@@ -5,6 +5,7 @@ import com.amazonaws.services.dynamodbv2.document.ItemCollection;
 import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
 import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
 import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
+import bolts.*;
 
 public class ScheduleTask extends TimerTask{
 	private int num;
@@ -12,15 +13,15 @@ public class ScheduleTask extends TimerTask{
 	private Integer[] count;
 	public void run(){
 		System.out.println("initialization time:"+(new Date()).toString());
-		Item item = null;
+		ItemV2 item = null;
 		dynamoDBManager dynamoDB_inst = dynamoDBManager.instance();
-		ItemCollection<ScanOutcome> results = null;
-		Iterator<Item> iterator = null;
+		Task<CollectionWrapper<ItemV2>> results = null;
+		Iterator<ItemV2> iterator = null;
 		//String token = null;
 		boolean flag =false;
-		ArrayList<HashSet<Item>> jobs = null;
-		HashSet<Item> job = null;
-		
+		ArrayList<HashSet<ItemV2>> jobs = null;
+		HashSet<ItemV2> job = null;
+		/*
 		for(int i=0;i<3000;i++){
 			synchronized (this.count) {
 				System.out.printf("inner count: %d\n",this.count[0]);
@@ -32,20 +33,28 @@ public class ScheduleTask extends TimerTask{
 				System.out.println(e.getMessage());
 			}
 		}
-		return;
-		/*
+		return;*/
+		
 		while(!flag){
 			results = dynamoDB_inst.Scan("APNs");
-			iterator = results.iterator();
-			jobs = new ArrayList<HashSet<Item>>();
-			job = new HashSet<Item>();
+			try{
+				results.waitForCompletion();
+			}catch(InterruptedException exception){
+				System.out.println(exception.getMessage());
+				return;
+			}
+			System.out.printf("collection size is %d\n",results.getResult().size());
+			iterator = results.getResult().iterator();
+			System.out.printf("has Next: %b\n",iterator.hasNext());
+			jobs = new ArrayList<HashSet<ItemV2>>();
+			job = new HashSet<ItemV2>();
 			try{
 				while(iterator.hasNext()){
 					item = iterator.next();
 					job.add(item);
 					if(job.size()==num){
 						jobs.add(job);
-						job = new HashSet<Item>();
+						job = new HashSet<ItemV2>();
 					}
 					//logger.info(threadName+" logging!");
 				}
@@ -58,7 +67,10 @@ public class ScheduleTask extends TimerTask{
 				exception.getStackTrace();
 			}
 		}
+		System.out.println("Ready to start thread");
 		int threadNum = jobs.size();
+		System.out.printf("threadNum: %d\n",threadNum);
+
 		threadManager inst = threadManager.instance();
 		ArrayList<String> threadNames = new ArrayList<String>();
 		for(int i=1;i<=threadNum;i++){	
@@ -80,7 +92,7 @@ public class ScheduleTask extends TimerTask{
 			 System.out.println(exception.getMessage());
 			 exception.getStackTrace();
 		 }
-		 */
+		 
 	}
 	public ScheduleTask(int num,int sleep,Integer[] count){
 		this.num = num;

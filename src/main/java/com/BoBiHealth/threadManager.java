@@ -10,7 +10,7 @@ public class threadManager {
 		return threadList.size();
 	}
 	//this function create a new thread and return the thread the new thread's name
-	public String initNewThread(HashSet<Item> job){
+	public String initNewThread(Collection<ItemV2> job){
 		String threadName = null;
 		Integer i = 0;
 		for(i=0;keySet.contains(i);i++);

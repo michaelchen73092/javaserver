@@ -1,28 +1,16 @@
 package com.BoBiHealth;
 
-import java.text.*;
+import java.io.File;
+import java.math.BigDecimal;
 import java.util.*;
-
+import java.util.concurrent.ExecutionException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
-import java.math.BigDecimal;
-
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
-import com.amazonaws.metrics.AwsSdkMetrics;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.document.*;
-import com.amazonaws.services.dynamodbv2.document.spec.*;
-import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
-import com.amazonaws.services.dynamodbv2.model.KeyType;
-import com.amazonaws.services.dynamodbv2.model.LocalSecondaryIndex;
-import com.amazonaws.services.dynamodbv2.model.Projection;
-import com.amazonaws.services.dynamodbv2.model.ProjectionType;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
 import com.relayrides.pushy.apns.ApnsClient;
 import com.relayrides.pushy.apns.ClientNotConnectedException;
 import com.relayrides.pushy.apns.PushNotificationResponse;
@@ -30,27 +18,23 @@ import com.relayrides.pushy.apns.util.ApnsPayloadBuilder;
 import com.relayrides.pushy.apns.util.SimpleApnsPushNotification;
 
 import io.netty.util.concurrent.Future;
-import bolts.*;
-public class dynamoDBthread extends Thread {
+
+public class pushView extends TimerTask {
 	private String threadName;
-	private Collection<ItemV2> job;
 	private Calendar date;
     private static final Logger logger = LogManager.getLogger(dynamoDBthread.class);
-	dynamoDBthread(String name,Collection<ItemV2> job,Calendar date){
+	pushView(String name,Calendar date){
 		this.threadName = name;
-		this.job = job;
 		this.date = date;
-		assert(job !=null);
 		System.out.println("Creating "+threadName);
 	}
 	public void run(){
 		//System.out.printf(threadName+" defaultMetric is %b\n",AwsSdkMetrics.isMetricsEnabled());
-		System.out.println("Running "+threadName);
-		dynamoDBManager dynamoDB_inst = new dynamoDBManager();
+		//System.out.println("Running "+threadName);
 		ApnsClient<SimpleApnsPushNotification> apnsClient;
 		try{
 		apnsClient = new ApnsClient<SimpleApnsPushNotification>(
-		        new File("H:\\Certificate\\Certificate\\Certificates.p12"),"Cc5302196029");
+		        new File("H:\\Certificate\\Certificate\\CertificatesBerbi.p12"),"Cc5302196029!!");
 		final Future<Void> connectFuture = apnsClient.connect(ApnsClient.DEVELOPMENT_APNS_HOST);
 		connectFuture.await();
 		System.out.println("sucessfully await");
@@ -59,34 +43,8 @@ public class dynamoDBthread extends Thread {
 			e.getStackTrace();
 			return;
 		}
-		//Thread curr_thread = Thread.currentThread();
-		/*try{
-		//Thread.sleep(360000);
-		//System.out.printf(threadName+" defaultMetric is %b",AwsSdkMetrics.isDefaultMetricsEnabled());
 
-		}catch(InterruptedException e){
-			System.out.println("sleep exception");
-		}*/
-		/*if(threadName.equals("Thread-2")){
-			System.out.println(threadName+" shutdown");
-			dynamoDB_inst.dynamoDB.shutdown();
-		}*/
-		//following is the code to interact with database
 		long startTime = System.currentTimeMillis();
-		/*Table table = dynamoDB_inst.dynamoDB.getTable("Test2");
-		HashMap<String, String> nameMap = new HashMap<String,String>();
-		HashMap<String, Object> valueMap = new HashMap<String,Object>();
-		String key1 = dynamoDB_inst.operationBi("email", Op.eq, "zero064@gmail.com", Type.Str, nameMap, valueMap);
-		String key2 = dynamoDB_inst.operationBi("id", Op.eq, 0, Type.Int, nameMap, valueMap);
-		ItemCollection<QueryOutcome> results = null;
-	    Iterator<Item> iterator = null;
-		Item item = null;
-		QuerySpec querySpec = new QuerySpec();
-		System.out.println(key1);
-		System.out.println(key2);
-		querySpec.withKeyConditionExpression(key1+" and "+key2);
-		querySpec.withNameMap(nameMap);*/
-		Iterator<ItemV2> iterator = job.iterator();
 		int[] int_arry = new int[1];
 		System.out.println(threadName);
 		printTime(date);
@@ -100,43 +58,16 @@ public class dynamoDBthread extends Thread {
 		//iterate through all APNs in job
 			//Thie item is from APNs table
 		System.out.println("before get in while loop");
-			while(iterator.hasNext()){
-				ItemV2 item = iterator.next();
-				String email = (String) item.get("email");
-				String firstname = (String) item.get("firstname");
-				String token = (String) item.get("token");
-				String lastname = (String) item.get("lastname");
-				String tabName = appointTabName(email);
-				// = dynamoDB_inst.Query(tabName,hashkey,sortKey, Op.eq);
-				Task<CollectionWrapper<ItemV2>> task = dynamoDB_inst.Query(tabName,hashkey,sortKey, Op.eq);
-				try{
-					task.waitForCompletion();
-				}catch(Exception exception){
-					System.out.println(exception.getMessage());
-					return;
-				}
-				Iterator<ItemV2> it_app = results.iterator();
-				/*int count = results.getAccumulatedItemCount();
-				if(count==0){
-					//something wrong in the table , send request to recreate the whole table
-				}*/
-				while(it_app.hasNext()){
-					ItemV2 app_queue = it_app.next();
-					BigDecimal open = (BigDecimal) app_queue.get("open");
-					BigDecimal reserv = (BigDecimal) app_queue.get("reservation");
-					BigDecimal month =(BigDecimal) app_queue.get("month");
-					BigDecimal year = (BigDecimal) app_queue.get("year");
-					List<String> queue = (List<String>) app_queue.get("queue");
+			
+				String firstname = "Wei-Chih";
+				String token = "da5322ac50f098b09e4731d0376da38e0c32194130d6eb185ed6a9bf00066038";
+				String lastname = "Chen";
+
+
 					//System.out.println("before get in compareTo");
-					if(year.compareTo(piv_year)!=0 || month.compareTo(piv_month)!=0){
-						System.out.println("Incorrect Month year");
-						System.out.printf("Suppose year:%s month:%s\n",piv_year.toString(),piv_month.toString());
-						System.out.printf("Recorded year:%s month:%s\n",year.toString(),month.toString());
-						//issue request to another server to rewrite the entry
-						break;
-					}
-					if(reserv.compareTo(piv_num)>0){
-						String message = threadName+":"+firstname+" "+lastname+",you have appoinments in next "+ new Integer(int_arry[0]).toString()+" minutes";
+	
+					if(true){
+						String message = threadName+":"+firstname+" "+lastname+",you have appoinments in next  minutes";
 						System.out.println(threadName+":"+message);
 						System.out.println("token:"+token);
 						try{
@@ -146,8 +77,8 @@ public class dynamoDBthread extends Thread {
 							exception.getStackTrace();
 						}
 					}
-				}
-			}
+			
+			
 			/*for (int i=1;i<=1500;i++) {
 				//valueMap.put(":I", i);
 				//querySpec.withValueMap(valueMap);
@@ -181,6 +112,10 @@ public class dynamoDBthread extends Thread {
 		
 		
 	}
+	public static void main(String args[]){
+		Timer timer = new Timer(false);
+		timer.schedule(new pushView("thread1-", Calendar.getInstance(TimeZone.getTimeZone("UTC"))), 20, 20000);
+	}
 	private String toSortKey(int hour, int min){
 		String hString = new Integer(hour).toString();
 		String mString = new Integer(min).toString();
@@ -207,10 +142,9 @@ public class dynamoDBthread extends Thread {
 		    payloadBuilder.setAlertBody(message);
 		    payloadBuilder.setBadgeNumber(1);
 		    payloadBuilder.setSoundFileName("default");
-
 		    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
 		    //final String token2 = token;
-		    pushNotification = new SimpleApnsPushNotification(token, "com.Berbi.BerbiHealth", payload);
+		    pushNotification = new SimpleApnsPushNotification(token, "com.Berbi.Berbi", payload);
 		}
 		Future<PushNotificationResponse<SimpleApnsPushNotification>> sendNotificationFuture =
 		        apnsClient.sendNotification(pushNotification);
@@ -232,7 +166,7 @@ public class dynamoDBthread extends Thread {
 			                pushNotificationResponse.getTokenInvalidationTimestamp());
 			        }
 			    }
-			} catch (final Exception e) {
+			} catch (final ExecutionException e) {
 			    System.err.println("Failed to send push notification.");
 			    e.printStackTrace();
 	
@@ -267,15 +201,6 @@ public class dynamoDBthread extends Thread {
 		}
 		return;
 	
-	}
-	public void startThread(){
-		
-		System.out.println("Starting "+threadName);
-		((Thread) this).start();
-		/*if(t==null){
-			t = new Thread(this,threadName);
-			t.start();
-		}*/
 	}
 	
 }

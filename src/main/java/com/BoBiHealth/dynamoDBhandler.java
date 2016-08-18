@@ -1,9 +1,10 @@
 package com.BoBiHealth;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.ServletException;
 import java.io.IOException;
+//servlet
 
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHandler;
 
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.security.HashLoginService;
@@ -22,8 +23,25 @@ import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
+import org.eclipse.jetty.http2.server.*;
+import org.eclipse.jetty.http2.*;
+import org.eclipse.jetty.alpn.server.*;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Slf4jLog;
+
+//for test
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.ServletHandler;
+
+
+
+//for test
+
+
 
 import org.eclipse.jetty.io.EndPoint;
 import java.net.InetSocketAddress;
@@ -103,11 +121,11 @@ public class dynamoDBhandler extends AbstractHandler
 
     public static void main(String[] args) throws Exception
     {	
-
+    	
     	// Setup Threadpool
-        QueuedThreadPool threadPool = new QueuedThreadPool();
-        threadPool.setMaxThreads(500);
-        Server server = new Server(threadPool);
+        //QueuedThreadPool threadPool = new QueuedThreadPool();
+        //threadPool.setMaxThreads(500);
+        Server server = new Server(8090);
         // HTTP Configuration
         HttpConfiguration http_config = new HttpConfiguration();
         http_config.setSecureScheme("https");
@@ -117,40 +135,85 @@ public class dynamoDBhandler extends AbstractHandler
         http_config.setResponseHeaderSize(8192);
         http_config.setSendServerVersion(true);
         http_config.setSendDateHeader(true);
+        http_config.addCustomizer(new SecureRequestCustomizer());
+
+        //http_config.setSecureScheme("https");
+        //http_config.setSecurePort(8443);
+        //http_config.setSendXPoweredBy(true);
+        //http_config.setSendServerVersion(true);
+        
         // SSL Context Factory
         SslContextFactory sslContextFactory = new SslContextFactory();
+        setsslContexFactory(sslContextFactory);
+        // SSL HTTP Configuration
+        HttpConfiguration https_config = new HttpConfiguration(http_config);
+        //HttpConfiguration https_config = new HttpConfiguration();
+
+        //https_config.addCustomizer(new SecureRequestCustomizer());
+    	//HTTP/2 setting
+        
+        //HttpConnectionFactory http1 = new HttpConnectionFactory(https_config);
+        HTTP2ServerConnectionFactory http2 = new HTTP2ServerConnectionFactory(https_config);
+        NegotiatingServerConnectionFactory.checkProtocolNegotiationAvailable();
+        ALPNServerConnectionFactory alpn = new ALPNServerConnectionFactory();
+        SslConnectionFactory sslConnectionFactory = new SslConnectionFactory(sslContextFactory,"alpn");
+        //alpn.setDefaultProtocol(http1.getProtocol());
+        
+        // SSL Connector
+        ServerConnector sslConnector = new ServerConnector(server,
+            sslConnectionFactory,
+            alpn,http2);
+        sslConnector.setPort(8443);
+        server.addConnector(sslConnector);
+       /* ContextHandler contextHandler = new ContextHandler();
+        contextHandler.setContextPath("/hello");
+        contextHandler.setHandler(new dynamoDBhandler());*/
+        //ServletContextHandler contextHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
+        //contextHandler.setContextPath("/hello");
+        //contextHandler.setResourceBase(System.getProperty("java.io.tmpdir"));
+        //contextHandler.addServlet(HelloServlet.class, "/hello");
+        ServletHandler handler = new ServletHandler();
+        server.setHandler(handler);
+        handler.addServletWithMapping(HelloServlet.class,"/hello/*");
+        //add servlet
+        //looger setting
+        Slf4jRequestLog requestLog = new Slf4jRequestLog();
+        Log.setLog(new Slf4jLog());
+
+        //connector = sslConnector;
+    	server.setRequestLog(requestLog);
+    	System.out.printf("LoggerName: %s\n",requestLog.getLoggerName());
+        server.start();
+        server.join();
+    }
+    public static void setsslContexFactory(SslContextFactory sslContextFactory){
         sslContextFactory.setKeyStorePath("C:/test.keystore");
         sslContextFactory.setKeyStorePassword("Cc5302196029");
         sslContextFactory.setKeyManagerPassword("Cc5302196029");
         sslContextFactory.setTrustStorePath("C:/test.keystore");
         sslContextFactory.setTrustStorePassword("Cc5302196029");
-        sslContextFactory.setExcludeCipherSuites("SSL_RSA_WITH_DES_CBC_SHA",
+        //sslContextFactory.setProtocol(FAILED);
+        sslContextFactory.setCipherComparator(HTTP2Cipher.COMPARATOR);
+        sslContextFactory.setUseCipherSuitesOrder(true);
+        /*sslContextFactory.setExcludeCipherSuites("SSL_RSA_WITH_DES_CBC_SHA",
                 "SSL_DHE_RSA_WITH_DES_CBC_SHA", "SSL_DHE_DSS_WITH_DES_CBC_SHA",
                 "SSL_RSA_EXPORT_WITH_RC4_40_MD5",
                 "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA",
                 "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA",
-                "SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA");
-        // SSL HTTP Configuration
-        HttpConfiguration https_config = new HttpConfiguration(http_config);
-        https_config.addCustomizer(new SecureRequestCustomizer());
-        // SSL Connector
-        ServerConnector sslConnector = new ServerConnector(server,
-            new SslConnectionFactory(sslContextFactory,HttpVersion.HTTP_1_1.asString()),
-            new HttpConnectionFactory(https_config));
-        sslConnector.setPort(8443);
-        server.addConnector(sslConnector);
-        ContextHandler contextHandler = new ContextHandler();
-        contextHandler.setContextPath("/hello");
-        contextHandler.setHandler(new dynamoDBhandler());
-        server.setHandler(contextHandler);
-        //looger setting
-        Slf4jRequestLog requestLog = new Slf4jRequestLog();
-        Log.setLog(new Slf4jLog());
-
-        connector = sslConnector;
-    	server.setRequestLog(requestLog);
-    	System.out.printf("LoggerName: %s\n",requestLog.getLoggerName());
-        server.start();
-        server.join();
+                "SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA");*/
+    }
+    @SuppressWarnings("serial")
+    public static class HelloServlet extends HttpServlet
+    {
+        @Override
+        protected void doGet( HttpServletRequest request,
+                              HttpServletResponse response ) throws ServletException,
+                                                            IOException
+        {
+        	System.out.println("get called");
+            response.setContentType("text/html");
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.getWriter().println("<h1>Hello from HelloServlet</h1>");
+        }
     }
 }

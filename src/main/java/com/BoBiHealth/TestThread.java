@@ -18,12 +18,33 @@ import io.netty.util.concurrent.Future;
 import java.io.*;
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 
 
 public class TestThread {
 	public static Integer[] test_count = null;
+	public  static class counter extends Thread{
+		private static int[] lock = new int[1];
+		private String threadName;
+		public void run(){
+			while(true){
+				try{
+					counting();
+				}catch(InterruptedException exception){
+					return;
+				}
+			}
+		}
+		private void counting()throws InterruptedException{
+			synchronized (lock) {
+				System.out.printf("%s: %d\n",this.threadName,lock[0]++);
+				Thread.sleep(20);
+			}
+		}
+		public  counter(String threadName){
+			this.threadName = threadName;
+		}
+	}
 	public static void main(String args[])throws Exception{
 		//AwsSdkMetrics.setCredentialProvider(new ProfileCredentialsProvider("H:\\AWSCredentials.properties","default"));
 		//AwsSdkMetrics.setMetricNameSpace("TestMetric");
@@ -50,11 +71,17 @@ public class TestThread {
 		System.out.println("sample token: "+TokenUtil.sanitizeTokenString("<efc7492 bdbd8209>"));
 		testThread(job);
 		System.out.println("the end");*/
+		counter th1 = new counter("thread1");
+		counter th2 = new counter("thread2");
+		Calendar date = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+		System.out.printf("first:%d\n",date.getTimeInMillis());
+		System.out.printf("second:%d\n",date.getTime().getTime());
+		Thread.sleep(600000);
 		test_count = new Integer[1];
 		test_count[0] = 0;
 		Timer timer = new Timer();
 		timer.schedule(new ScheduleTask(1,300000,test_count), 2, 600000);
-		System.out.println("Imediately");
+		/*System.out.println("Imediately");
 		Thread.sleep(100);
 		for(int i=0;i<2000;i++){
 			synchronized (test_count[0]) {
@@ -63,16 +90,17 @@ public class TestThread {
 			}
 			Thread.sleep(3);
 
-		}
-			/*Thread.sleep(20000);
+		}*/
+		/*
+		Thread.sleep(20000);
 		System.out.println("test alive");
 		threadManager.instance().stopThread();
 		Thread.sleep(1000);
-		threadManager.instance().isAlive();*/
-
+		threadManager.instance().isAlive();
+		*/
 
 	}
-	public static void testThread(HashSet<Item> job)throws Exception{
+	public static void testThread(HashSet<ItemV2> job)throws Exception{
 		threadManager inst = threadManager.instance();
 		ArrayList<String> threadNames = new ArrayList<String>();
 		threadNames.add(inst.initNewThread(job));

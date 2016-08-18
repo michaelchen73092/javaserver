@@ -29,6 +29,8 @@
         <sqlite4java.version>1.0.392</sqlite4java.version>
         <hamcrest.version>1.3</hamcrest.version>
         <jettyVersion>9.3.11.M0</jettyVersion>
+         <boltVersion>1.4.0</boltVersion>
+        
      	</properties>
     <developers>
         <developer>
@@ -55,12 +57,14 @@
 
     <!-- Libraries -->
     <dependencies>
-    <!-- https://mvnrepository.com/artifact/org.json/json -->
+		<!-- https://mvnrepository.com/artifact/org.json/json -->
 		<dependency>
 		    <groupId>org.json</groupId>
 		    <artifactId>json</artifactId>
-		    <version>20160212</version>
+		    <version>20160810</version>
 		</dependency>
+
+
     
     	<!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
 		<dependency>
@@ -79,6 +83,51 @@
 		    <artifactId>jetty-security</artifactId>
 		    <version>${jettyVersion}</version>
 		</dependency>
+    	<!-- https://mvnrepository.com/artifact/org.eclipse.jetty.http2/http2-server -->
+		<dependency>
+		    <groupId>org.eclipse.jetty.http2</groupId>
+		    <artifactId>http2-server</artifactId>
+		    <version>${jettyVersion}</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.eclipse.jetty.http2/http2-client -->
+		<dependency>
+		    <groupId>org.eclipse.jetty.http2</groupId>
+		    <artifactId>http2-client</artifactId>
+		    <version>${jettyVersion}</version>
+		</dependency>
+				
+    	<!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-alpn-server -->
+		<dependency>
+		    <groupId>org.eclipse.jetty</groupId>
+		    <artifactId>jetty-alpn-server</artifactId>
+		    <version>${jettyVersion}</version>
+		</dependency>
+    	<!-- https://mvnrepository.com/artifact/org.eclipse.jetty.http2/http2-parent -->
+		<dependency>
+		    <groupId>org.eclipse.jetty.http2</groupId>
+		    <artifactId>http2-parent</artifactId>
+		    <version>${jettyVersion}</version>
+		    <type>pom</type>
+		</dependency>
+    	<!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-servlet -->
+		<dependency>
+		    <groupId>org.eclipse.jetty</groupId>
+		    <artifactId>jetty-servlet</artifactId>
+		    <version>${jettyVersion}</version>
+		</dependency>
+    	<!-- https://mvnrepository.com/artifact/com.parse.bolts/bolts-tasks -->
+		<dependency>
+		    <groupId>com.parse.bolts</groupId>
+		    <artifactId>bolts-tasks</artifactId>
+		    <version>${boltVersion}</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.parse.bolts/bolts-applinks -->
+		<dependency>
+		    <groupId>com.parse.bolts</groupId>
+		    <artifactId>bolts-applinks</artifactId>
+		    <version>${boltVersion}</version>
+		</dependency>
+		
     	
 		<dependency>
 		  <groupId>org.eclipse.jetty</groupId>
