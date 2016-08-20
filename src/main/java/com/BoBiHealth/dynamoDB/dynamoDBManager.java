@@ -1,4 +1,4 @@
-package com.BoBiHealth;
+package com.BoBiHealth.dynamoDB;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -175,15 +175,18 @@ public class dynamoDBManager {
 		queryre.withKeyConditionExpression(finalkey);
 		queryre.setExpressionAttributeNames(nameMap);
 		queryre.setExpressionAttributeValues(valueMap);
-	
+		System.out.println("before initiate the client");
 		dynamoDB.queryAsync(queryre,new AsyncHandler<QueryRequest,QueryResult>(){
 			public void onSuccess(QueryRequest queryRequest,QueryResult queryResult){
 				List<Map<String,AttributeValue>> result = queryResult.getItems();
 				CollectionWrapper<ItemV2> collection = new CollectionWrapper<ItemV2>(queryRequest,queryResult.getLastEvaluatedKey());
+				System.out.println("task success!!");
 				taskCompletionSource.setResult(tranForm(collection,result));
 				
 			}
 			public void onError(Exception exception){
+				System.out.println("task doomed!!");
+
 				taskCompletionSource.setError(exception);
 			}
 		});
@@ -219,10 +222,12 @@ public class dynamoDBManager {
 				if(buffer_laskKey != null){
 					laskKey.putAll(buffer_laskKey);
 				}
+				System.out.println("task success!!");
 				taskCompletionSource.setResult(tranForm(collection, result));
 				
 			}
 			public void onError(Exception exception){
+				System.out.println("task doomed!!");
 				taskCompletionSource.setError(exception);
 			}
 		});

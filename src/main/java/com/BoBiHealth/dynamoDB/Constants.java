@@ -1,4 +1,4 @@
-package com.BoBiHealth;
+package com.BoBiHealth.dynamoDB;
 import java.util.*;
 public class Constants {
 	private static Constants inst=null;
@@ -28,7 +28,6 @@ public class Constants {
 		Test2.add("id");
 		keyDict.put("Test2", Test2);
 		ArrayList<String> APNs = new ArrayList<String>();
-		APNs.add("firstname");
 		APNs.add("email");
 		keyDict.put("APNs", APNs);
 		

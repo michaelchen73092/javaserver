@@ -122,7 +122,7 @@ public class dynamoDBhandler extends AbstractHandler
     public static void main(String[] args) throws Exception
     {	
     	
-    	// Setup Threadpool
+    	//Setup Threadpool
         //QueuedThreadPool threadPool = new QueuedThreadPool();
         //threadPool.setMaxThreads(500);
         Server server = new Server(8090);
@@ -168,13 +168,14 @@ public class dynamoDBhandler extends AbstractHandler
        /* ContextHandler contextHandler = new ContextHandler();
         contextHandler.setContextPath("/hello");
         contextHandler.setHandler(new dynamoDBhandler());*/
-        //ServletContextHandler contextHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
-        //contextHandler.setContextPath("/hello");
-        //contextHandler.setResourceBase(System.getProperty("java.io.tmpdir"));
-        //contextHandler.addServlet(HelloServlet.class, "/hello");
-        ServletHandler handler = new ServletHandler();
-        server.setHandler(handler);
-        handler.addServletWithMapping(HelloServlet.class,"/hello/*");
+        ServletContextHandler contextHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
+        contextHandler.setContextPath("/hello");
+        contextHandler.setResourceBase(System.getProperty("java.io.tmpdir"));
+        contextHandler.addServlet(HelloServlet.class, "/*");
+        server.setHandler(contextHandler);
+        //ServletHandler handler = new ServletHandler();
+        //server.setHandler(handler);
+        //handler.addServletWithMapping(HelloServlet.class,"/hello/*");
         //add servlet
         //looger setting
         Slf4jRequestLog requestLog = new Slf4jRequestLog();
@@ -210,10 +211,14 @@ public class dynamoDBhandler extends AbstractHandler
                               HttpServletResponse response ) throws ServletException,
                                                             IOException
         {
+        	String doctor = request.getParameter("doctor");
+            System.out.printf("method: %s\n", request.getMethod());
+            System.out.printf("PathInfo: %s\n",request.getPathInfo());
         	System.out.println("get called");
             response.setContentType("text/html");
             response.setStatus(HttpServletResponse.SC_OK);
             response.getWriter().println("<h1>Hello from HelloServlet</h1>");
+            if(doctor != null)response.getWriter().printf("<h2>%s</h2>",doctor);
         }
     }
 }

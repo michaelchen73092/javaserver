@@ -1,20 +1,21 @@
-package com.BoBiHealth;
+package com.BoBiHealth.Check;
 
 import java.math.BigDecimal;
 import java.util.*;
 
-import bolts.Continuation;
-import bolts.Task;
-
-public class checkingManager extends TimerTask {
-	
-	private ArrayList<appointDelegate[]> appointQueue;
+import bolts.*;
+import com.BoBiHealth.Doctor.*;
+import com.BoBiHealth.dynamoDB.*;
+public class checkingManager extends Thread {
+	public static Collection<Long> track_set = new HashSet<Long>();
+	private Collection<appointDelegate[]> appointQueue;
 	public void run(){
 		
 		dynamoDBManager dynamoDB_inst = dynamoDBManager.instance();
 		Iterator<appointDelegate[]> iterator = appointQueue.iterator();
-		Calendar date = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+		final Calendar date = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 		int[] int_arry = new int[1];
+		Collection<Task<Object>> task_collection = new ArrayList<Task<Object>>();
 		printTime(date);
 		setTargetTime(date,int_arry);
 		final BigDecimal piv_num = new BigDecimal(0);
@@ -22,6 +23,7 @@ public class checkingManager extends TimerTask {
 		String sortKey = toSortKey(date.get(Calendar.HOUR_OF_DAY), date.get(Calendar.MINUTE)) ;
 		final BigDecimal piv_month = new BigDecimal(date.get(Calendar.MONTH)+1);
 		final BigDecimal piv_year = new BigDecimal(date.get(Calendar.YEAR));
+		final AppointCollector collector = new AppointCollector();
 		//iterate through all APNs in job
 			//Thie item is from APNs table
 		System.out.println("before get in while loop");
@@ -30,23 +32,50 @@ public class checkingManager extends TimerTask {
 				String email = appoint[0].getEmail();
 				String tabName = appointTabName(email);
 				Task<CollectionWrapper<ItemV2>> task = dynamoDB_inst.Query(tabName,hashkey,sortKey, Op.eq);
-				task.continueWith(new Continuation<CollectionWrapper<ItemV2>, Void>(){
-					public Void then(Task<CollectionWrapper<ItemV2>> task) throws Exception{
+				final TaskCompletionSource<Object> taskCompletionSource = new TaskCompletionSource<Object>();
+				task_collection.add(taskCompletionSource.getTask());
+				task.continueWithTask(new Continuation<CollectionWrapper<ItemV2>, Task<Object>>(){
+					public Task<Object> then(Task<CollectionWrapper<ItemV2>> task) throws Exception{
 						if(task.isCancelled()){
+							taskCompletionSource.setCancelled();
+							return null;
 							
 						}else if(task.isFaulted()){
 							Exception exception = task.getError();
+							System.out.println(exception.getMessage());
+							taskCompletionSource.setError(exception);
 							throw exception;
 						}else{
-							checkAppoint(appoint,task.getResult(), piv_year, piv_month, piv_num);
+							checkAppoint(appoint,task.getResult(), piv_year, piv_month, piv_num,collector);
+							taskCompletionSource.setResult(null);
 						}
 						return null;
 					}
 				});
 			}
+			Task<Void> final_task = Task.whenAll(task_collection);
+			try{
+				final_task.waitForCompletion();
+			}catch(Exception exception){
+				return;
+			}
+			
+			Timer timer = new Timer();
+			long delay = date.getTimeInMillis()-System.currentTimeMillis();
+			Long timestamp = new Long(date.getTimeInMillis());
+			synchronized (checkingManager.track_set) {
+				if(checkingManager.track_set.contains(timestamp)){
+					
+				}else{
+					checkingManager.track_set.clear();
+					timer.schedule(collector, delay>0 ? delay:2);
+					checkingManager.track_set.add(timestamp);
+				}
+			}
+
 			
 	}
-	private void checkAppoint(appointDelegate[] appoint,CollectionWrapper<ItemV2> collection,BigDecimal piv_year,BigDecimal piv_month,BigDecimal piv_num){
+	private void checkAppoint(appointDelegate[] appoint,CollectionWrapper<ItemV2> collection,BigDecimal piv_year,BigDecimal piv_month,BigDecimal piv_num,AppointCollector collector){
 		Iterator<ItemV2> it_app = collection.iterator();
 		int count = collection.size();
 		if(count==0){
@@ -69,10 +98,7 @@ public class checkingManager extends TimerTask {
 				break;
 			}
 			if(reserv.compareTo(piv_num)>0){
-				synchronized (appoint) {
-					appoint[0].addAppointToQueue(app_queue);
-
-				}
+				collector.addAppoint(appoint, app_queue);					
 			}
 		}
 	}
@@ -114,10 +140,29 @@ public class checkingManager extends TimerTask {
 		return;
 	
 	}
-	public checkingManager(ArrayList<appointDelegate[]> queue){
+	public checkingManager(Collection<appointDelegate[]> queue){
 		synchronized (queue) {
-			this.appointQueue = new ArrayList<appointDelegate[]>(queue);
+			this.appointQueue = new HashSet<appointDelegate[]>(queue);
 
+		}
+	}
+}
+class AppointCollector extends TimerTask{
+	HashMap<appointDelegate[], ItemV2> map;
+	public void run(){
+		Iterator<appointDelegate[]> ite = map.keySet().iterator();
+		while(ite.hasNext()){
+			appointDelegate[] pipe = ite.next();
+			ItemV2 appont_queue = map.get(pipe);
+			pipe[0].addAppointToQueue(appont_queue);
+		}
+	}
+	public void AppointCollector(){
+		map = new HashMap<appointDelegate[],ItemV2>();
+	}
+	public void addAppoint(appointDelegate[] delegate,ItemV2 item){
+		synchronized (map) {
+			map.put(delegate, item);
 		}
 	}
 }

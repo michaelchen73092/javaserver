@@ -6,7 +6,7 @@ import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
 import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
 import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
 import bolts.*;
-
+import com.BoBiHealth.dynamoDB.*;
 public class ScheduleTask extends TimerTask{
 	private int num;
 	private int sleep;

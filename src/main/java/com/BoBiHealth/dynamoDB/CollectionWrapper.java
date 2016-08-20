@@ -1,4 +1,4 @@
-package com.BoBiHealth;
+package com.BoBiHealth.dynamoDB;
 import com.amazonaws.services.dynamodbv2.model.*;
 import java.util.*;
 import bolts.*;

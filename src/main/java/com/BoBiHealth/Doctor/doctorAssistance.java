@@ -1,9 +1,8 @@
-package com.BoBiHealth;
+package com.BoBiHealth.Doctor;
 
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-
 import org.json.*;
 
 import com.amazonaws.services.dynamodbv2.document.Item;
@@ -18,7 +17,7 @@ import com.relayrides.pushy.apns.util.SimpleApnsPushNotification;
 import java.util.*;
 import bolts.*;
 import io.netty.util.concurrent.Future;
-
+import com.BoBiHealth.dynamoDB.*;
 public class doctorAssistance extends Thread implements appointDelegate,doctorStatusDelegate{
 	public static HashMap<String, doctorAssistance[]> assistanceMap = new HashMap<String, doctorAssistance[]>();
 	private ArrayList<JSONObject> request_queue; 
@@ -30,7 +29,6 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 	private int[] task_count;
 	private int[] appoint_task_count;
 	private JSONObject doctor;
-	private String email;
 	private boolean[] taken;
 	public void run(){
 		while(true){
@@ -57,7 +55,7 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 		}
 	}
 	public static void main(String args[])throws Exception{
-		doctorAssistance assistance = new doctorAssistance("zero",new doctorAssistance[1]);
+		doctorAssistance assistance = new doctorAssistance(new JSONObject(),new doctorAssistance[1]);
 		
 		assistance.start();
 		
@@ -74,11 +72,11 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 		
 	}
 	
-	public doctorAssistance(String email,doctorAssistance[] pipe){
+	public doctorAssistance(JSONObject doctor,doctorAssistance[] pipe){
 		request_queue = new ArrayList<JSONObject>();
 		worker = new onWorking[1];
 		this.access = pipe;
-		this.email = email;
+		this.doctor = doctor;
 		this.que_lock[0] = false;
 		this.taken = new boolean[1];
 		task_count = new int[1];
@@ -88,8 +86,14 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 		is_online = new boolean[1];
 		is_online[0] = false;
 	}
-	public String getEmail(){
-		return this.email;
+	public boolean hasTask(){
+		synchronized (task_count) {
+			if(task_count[0]>0){
+				return true;
+			}else{
+				return false;
+			}
+		}
 	}
 	public void addAppointToQueue(ItemV2 item){
 		synchronized (request_queue) {
@@ -138,7 +142,6 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 			if(task_count[0]==0){
 				suggestion = true;
 			}
-			
 		}
 
 		if(suggestion) shutDownMe();
@@ -167,6 +170,9 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 	}
 	//delegate's job
 	//inform worker, the patient is handled by doctor
+	public String getEmail(){
+		return this.doctor.getString("email");
+	}
 	public boolean taken(){
 		synchronized (this.taken) {
 			if(this.taken[0]){

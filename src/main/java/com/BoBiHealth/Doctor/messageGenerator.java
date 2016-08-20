@@ -1,4 +1,4 @@
-package com.BoBiHealth;
+package com.BoBiHealth.Doctor;
 import java.util.*;
 import org.json.*;
 public class messageGenerator {

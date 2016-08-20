@@ -31,6 +31,7 @@ import com.relayrides.pushy.apns.util.SimpleApnsPushNotification;
 
 import io.netty.util.concurrent.Future;
 import bolts.*;
+import com.BoBiHealth.dynamoDB.*;
 public class dynamoDBthread extends Thread {
 	private String threadName;
 	private Collection<ItemV2> job;

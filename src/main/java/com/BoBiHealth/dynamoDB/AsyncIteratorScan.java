@@ -1,4 +1,4 @@
-package com.BoBiHealth;
+package com.BoBiHealth.dynamoDB;
 
 
 import java.util.*;

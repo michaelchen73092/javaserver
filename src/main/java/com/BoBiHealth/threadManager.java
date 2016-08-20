@@ -1,7 +1,7 @@
 package com.BoBiHealth;
 import java.util.*;
 import com.amazonaws.services.dynamodbv2.document.*;
-
+import com.BoBiHealth.dynamoDB.*;
 public class threadManager {
 	private static threadManager inst = null;
 	private HashMap<String,dynamoDBthread> threadList = new HashMap<String,dynamoDBthread>();

@@ -1,4 +1,4 @@
-package com.BoBiHealth;
+package com.BoBiHealth.Doctor;
 
 public interface doctorStatusDelegate {
 	public boolean taken();

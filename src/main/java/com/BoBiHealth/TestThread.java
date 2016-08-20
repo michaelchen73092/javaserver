@@ -14,12 +14,12 @@ import com.relayrides.pushy.apns.util.SimpleApnsPushNotification;
 import com.relayrides.pushy.apns.util.TokenUtil;
 import io.netty.util.concurrent.Future;
 
-
+import bolts.*;
 import java.io.*;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-
+import com.BoBiHealth.dynamoDB.*;
 
 public class TestThread {
 	public static Integer[] test_count = null;
@@ -76,6 +76,22 @@ public class TestThread {
 		Calendar date = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 		System.out.printf("first:%d\n",date.getTimeInMillis());
 		System.out.printf("second:%d\n",date.getTime().getTime());
+		System.out.printf("wall time%d\n", System.currentTimeMillis());
+		Task<Object> task = dynamoDBManager.instance().Query("APNs", "zero064@gmail.com", null, Op.eq).continueWithTask(new Continuation<CollectionWrapper<ItemV2>, Task<Object>>(){
+			public Task<Object> then(Task<CollectionWrapper<ItemV2>> task)throws Exception{
+				if(!task.isFaulted()){
+					Exception exception  = new Exception("test exception");
+					System.out.println("throw exception");
+					System.out.println(task.getError().getMessage());
+					throw exception;
+				}
+
+				return null;
+			}
+		});
+		if(task == null) System.out.println("task is null");
+		task.waitForCompletion();
+		System.out.println("task complete");
 		Thread.sleep(600000);
 		test_count = new Integer[1];
 		test_count[0] = 0;
