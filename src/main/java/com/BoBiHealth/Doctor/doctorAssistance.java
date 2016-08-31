@@ -4,7 +4,7 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import org.json.*;
-
+import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.ItemCollection;
 import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
@@ -18,9 +18,10 @@ import java.util.*;
 import bolts.*;
 import io.netty.util.concurrent.Future;
 import com.BoBiHealth.dynamoDB.*;
+import com.BoBiHealth.Check.*;
 public class doctorAssistance extends Thread implements appointDelegate,doctorStatusDelegate{
 	public static HashMap<String, doctorAssistance[]> assistanceMap = new HashMap<String, doctorAssistance[]>();
-	private ArrayList<JSONObject> request_queue; 
+	private ArrayList<ItemV2> request_queue; 
 	private boolean[] que_lock = new boolean[1] ;
 	public static Integer testInt = new Integer(3);
 	private doctorAssistance[] access;
@@ -28,11 +29,11 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 	private boolean[] is_online;
 	private int[] task_count;
 	private int[] appoint_task_count;
-	private JSONObject doctor;
+	private ItemV2 doctor;
 	private boolean[] taken;
 	public void run(){
 		while(true){
-			JSONObject curr_request;
+			ItemV2 curr_request;
 			synchronized (testInt) {
 				try{
 					curr_request = request_queue.remove(request_queue.size()-1);
@@ -55,15 +56,7 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 		}
 	}
 	public static void main(String args[])throws Exception{
-		doctorAssistance assistance = new doctorAssistance(new JSONObject(),new doctorAssistance[1]);
-		
-		assistance.start();
-		
-		Thread.sleep(40000);
-		assistance.interrupt();
-		synchronized (assistance.testInt) {
-			System.out.println("make it!!");
-		}
+
 		ArrayList<String> arrayList = new ArrayList<String>();
 		testArray(arrayList);
 		for(String str: arrayList){
@@ -72,8 +65,8 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 		
 	}
 	
-	public doctorAssistance(JSONObject doctor,doctorAssistance[] pipe){
-		request_queue = new ArrayList<JSONObject>();
+	public doctorAssistance(ItemV2 doctor,doctorAssistance[] pipe){
+		request_queue = new ArrayList<ItemV2>();
 		worker = new onWorking[1];
 		this.access = pipe;
 		this.doctor = doctor;
@@ -97,7 +90,7 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 	}
 	public void addAppointToQueue(ItemV2 item){
 		synchronized (request_queue) {
-			request_queue.add(item.getJSONObject());
+			request_queue.add(item);
 			synchronized (worker) {
 				if(worker[0] == null){
 					worker[0] = new onWorking(this.request_queue,this,this.doctor);
@@ -111,13 +104,13 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 		removeTask();
 		return;
 	}
-	private void addAppointTask(){
+	public void addAppointTask(){
 		if(appoint_task_count[0]==0){
 			addToCheckingManager();
 		}
 		appoint_task_count[0]++;
 	}
-	private void removeAppointTask(){
+	public  void removeAppointTask(){
 		appoint_task_count[0]--;
 		if(appoint_task_count[0]==0){
 			removeFromAppointChecking();
@@ -125,10 +118,10 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 		
 	}
 	private void addToCheckingManager(){
-		
+		AppointCheckManager.addAppoint((String)doctor.get("email"));
 	}
 	private void removeFromAppointChecking(){
-		
+		AppointCheckManager.removeAppoint((String)doctor.get("email"));
 	}
 	private void addTask(){
 		synchronized (task_count) {
@@ -147,7 +140,12 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 		if(suggestion) shutDownMe();
 	}
 	private void shutDownMe(){
-		
+		try{
+		PipeManager.instance.Get(Request.doctorAssistance_App.contexName, Request.doctorAssistance_App.Path.shutdown, "doctor="+(String)doctor.get("email"));
+		}catch(Exception exception){
+			System.out.println(exception.getMessage());
+			exception.printStackTrace(System.out);
+		}
 	}
 	public void modifyHeartBeat(BigInteger hearbeat){
 		synchronized (worker) {
@@ -156,7 +154,7 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 	}
 	//for online doctor 
 	//true: success, false: fail
-	public boolean get_in_OnlineQueue(JSONObject patient){
+	public boolean get_in_OnlineQueue(ItemV2 patient){
 		synchronized (request_queue) {
 			synchronized (is_online) {
 				if(is_online[0]){
@@ -171,7 +169,7 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 	//delegate's job
 	//inform worker, the patient is handled by doctor
 	public String getEmail(){
-		return this.doctor.getString("email");
+		return (String)this.doctor.get("email");
 	}
 	public boolean taken(){
 		synchronized (this.taken) {
@@ -182,25 +180,40 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 		}
 		return false;
 	}
+	public boolean isOnline(){
+		synchronized (is_online) {
+			return is_online[0];
+		}
+	}
+	//inform the assistant that doctor has started to handled this patient
 	public void take(){
 		synchronized (this.taken) {
 			this.taken[0] = true;
 		}
 	}
+	public void endCall(){
+		worker[0].endCall();
+	}
 	public void turnOffline()throws InterruptedException{
 		synchronized (worker) {
 			synchronized (is_online) {
-				String hashkey = this.doctor.getString("email"); 
+				String hashkey = (String)this.doctor.get("email"); 
 		    	final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
 			    if(is_online[0]){
 			    	payloadBuilder.setAlertBody(worker[0].message.informDoctorOutConnectionOffline());
+			    	is_online[0] = false;
+			    	DeleteItemRequest request = new DeleteItemRequest();
+			    	Map<String, Object> key_map = new HashMap<>();
+			    	key_map.put("email",(String)doctor.get("email"));
+			    	request.withKey((new ItemV2(key_map)).toAttributeValueMap());
+			    	dynamoDBManager.instance().deleteItemAsync(request);
 			    }else{
 			    	payloadBuilder.setAlertBody(worker[0].message.informDoctorOutConnection());
 			    }
 		    	payloadBuilder.setBadgeNumber(1);
 			    payloadBuilder.setSoundFileName("default");
 			    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
-			    worker[0].fetchAPNsAndsendNotification(this.doctor.getString("email"), payload);
+			    worker[0].fetchAPNsAndsendNotification((String)this.doctor.get("email"), payload);
 				is_online[0] = false;
 			}
 			removeTask();
@@ -222,9 +235,9 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 	}
 }
 class onWorking extends Thread{
-	private ArrayList<JSONObject> request_queue; 
-	private JSONObject current_patient;
-	private JSONObject doctor;
+	private ArrayList<ItemV2> request_queue; 
+	private ItemV2 current_patient;
+	private ItemV2 doctor;
 	private ApnsClient<SimpleApnsPushNotification> apnsClient;
 	public messageGenerator message;
 	private dynamoDBManager dynamoDB_inst;
@@ -236,6 +249,7 @@ class onWorking extends Thread{
 		while(true){
 			try{
 				checkQueue();
+				informPatient();
 				boolean inform_success = informDoctor();
 				if(inform_success){
 					if(!checkHearBeat()){
@@ -252,6 +266,10 @@ class onWorking extends Thread{
 		}
 
 	}
+	public void endCall(){
+		call_is_end[0] = true;
+	}
+
 	private boolean checkQueue()throws InterruptedException{
 		while(true){
 			synchronized (request_queue) {
@@ -295,12 +313,52 @@ class onWorking extends Thread{
 			}
 		}
 	}
+	private void informPatient() throws InterruptedException{
+		ItemV2 buffer = current_patient;
+		ArrayList<ItemV2> buffer_queue;
+		synchronized (request_queue) {
+			buffer_queue = new ArrayList<>(request_queue);
+		}
+		if(supervisor.isOnline()){
+			UpdateItemRequest request = new UpdateItemRequest();
+			Map<String, Object> key_map = new HashMap<>();
+			key_map.put("email", (String)doctor.get("email"));
+			Map<String, Object> value_map = new HashMap<>();
+			value_map.put("waitinglist_length", new BigDecimal(buffer_queue.size()));
+			request.withKey((new ItemV2(key_map)).toAttributeValueMap());
+			request.setAttributeUpdates((new ItemV2(value_map)).toAttributeValueUpdate(AttributeAction.PUT));
+			request.withTableName("onlineDoctors");
+			dynamoDBManager.instance().updateItemAsync(request);
+		}
+		int count = 0;
+		informPatient(buffer,count++);
+		for(ItemV2 item:buffer_queue){
+			informPatient(item,count++);
+		}
+		
+	}
+	private void informPatient(ItemV2 item,int count) throws InterruptedException{
+		String hashkey =(String) item.get("email");
+		String email = (String) item.get("email");
+		//build message and APNs message's body
+	    
+    	final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
+	    payloadBuilder.setAlertBody("#4:"+(new Integer(count)).toString());
+	    payloadBuilder.setBadgeNumber(1);
+	    payloadBuilder.setSoundFileName("default");
+	    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
+	    
+
+		// = dynamoDB_inst.Query(tabName,hashkey,sortKey, Op.eq);
+			fetchAPNsAndsendNotification(hashkey, payload);
+
+	}
 	private boolean informDoctor()throws InterruptedException{
 		int count = 0;
 		//how long to send the next push notification
 		int taken_check = 5*180;
-		String hashkey = doctor.getString("email");
-		String email = (String) doctor.getString("email");
+		String hashkey =(String) doctor.get("email");
+		String email = (String) doctor.get("email");
 		String firstname = (String) doctor.get("firstname");
 		String lastname = (String) doctor.get("lastname");
 		//build message and APNs message's body
@@ -401,7 +459,7 @@ class onWorking extends Thread{
 	//expell all patien in the queue
 	public void expellQueue()throws InterruptedException{
 		supervisor.lockQueue();
-		JSONObject nextOne = current_patient;
+		ItemV2 nextOne = current_patient;
 		this.current_patient = null;
 
 	    String hashkey;
@@ -411,7 +469,7 @@ class onWorking extends Thread{
 		synchronized (request_queue) {
 			supervisor.turnOffline();
 			do{
-				hashkey = nextOne.getString("email"); 
+				hashkey = (String)nextOne.get("email"); 
 		    	final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
 			    payloadBuilder.setAlertBody(message.informPatienLeave(nextOne.getString("firstname"), nextOne.getString("lastname")));
 			    payloadBuilder.setBadgeNumber(1);
@@ -428,7 +486,7 @@ class onWorking extends Thread{
 			}while(nextOne != null);
 		}
 	}
-	public onWorking(ArrayList<JSONObject> request_queue,doctorStatusDelegate boss,JSONObject doctor){
+	public onWorking(ArrayList<ItemV2> request_queue,doctorStatusDelegate boss,ItemV2 doctor){
 		this.request_queue = request_queue;
 		this.doctor = doctor;
 		this.supervisor = boss;

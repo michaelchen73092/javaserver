@@ -1,4 +1,4 @@
-package com.BoBiHealth;
+package com.BoBiHealth.Servlet;
 
 import static org.junit.Assert.*;
 import org.junit.*;

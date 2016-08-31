@@ -51,6 +51,7 @@ import java.io.*;
 import org.json.*;
 import java.util.*;
 import org.slf4j.*;
+import com.BoBiHealth.Check.*;
 
 
 
@@ -184,6 +185,7 @@ public class dynamoDBhandler extends AbstractHandler
         //connector = sslConnector;
     	server.setRequestLog(requestLog);
     	System.out.printf("LoggerName: %s\n",requestLog.getLoggerName());
+    	AppointCheckManager.start();
         server.start();
         server.join();
     }

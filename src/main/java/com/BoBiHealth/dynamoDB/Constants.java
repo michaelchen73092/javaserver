@@ -17,7 +17,7 @@ public class Constants {
 		ArrayList<Type> results = typeDict.get(tabName);
 		if(results==null){
 			results = new ArrayList<Type>();
-			results.add(Type.Int);
+			results.add(Type.Number);
 			results.add(Type.Str);
 		}
 		return results;
@@ -34,7 +34,7 @@ public class Constants {
 		
 		ArrayList<Type> Test2_type = new ArrayList<Type>();
 		Test2_type.add(Type.Str);
-		Test2_type.add(Type.Int);
+		Test2_type.add(Type.Number);
 		typeDict.put("Test2", Test2_type);
 		ArrayList<Type> APNs_type = new ArrayList<Type>();
 		APNs_type.add(Type.Str);

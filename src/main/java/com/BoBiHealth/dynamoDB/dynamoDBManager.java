@@ -1,6 +1,7 @@
 package com.BoBiHealth.dynamoDB;
 
 import java.text.SimpleDateFormat;
+import java.math.*;
 import java.util.*;
 import org.apache.logging.log4j.*;
 import com.amazonaws.handlers.AsyncHandler;
@@ -95,7 +96,7 @@ public class dynamoDBManager {
 		String temp_str = ":";
 		String ind ="";
 		switch (type) {
-			case Int:
+			case Number:
 				ind = "I";
 				break;
 			case Double:
@@ -123,8 +124,8 @@ public class dynamoDBManager {
 		}
 		AttributeValue attributeValue = new AttributeValue();
 		switch (type) {
-		case Int:
-			attributeValue.setN(((Integer)right).toString());
+		case Number:
+			attributeValue.setN(((BigDecimal)right).toString());
 			break;
 		case Double:
 			attributeValue.setN(((Integer)right).toString());
@@ -155,6 +156,58 @@ public class dynamoDBManager {
 			return_str = l_name+" "+op.rawValue()+" "+temp_str;
 		}
 		return return_str;
+	}
+	
+	public Task<Object> openAppoint(String tabName,ItemV2 item){
+		ItemV2 key = (ItemV2) item.get("keys");
+		ItemV2 value = (ItemV2) item.get("value");
+		TaskCompletionSource<Object> taskCompletionSource = new TaskCompletionSource<>();
+		UpdateItemRequest request = new UpdateItemRequest();
+		request.withAttributeUpdates(value.toAttributeValueUpdate(AttributeAction.PUT));
+		request.withKey(key.toAttributeValueMap());
+		request.withTableName(tabName);
+		dynamoDB.updateItemAsync(request, new AsyncHandler<UpdateItemRequest,UpdateItemResult>(){
+			public void onSuccess(UpdateItemRequest updateItemRequest,UpdateItemResult updateItemResult){
+				System.out.println("task success!!");
+				taskCompletionSource.setResult(null);			
+			}
+			public void onError(Exception exception){
+				System.out.println("task doomed!!");
+
+				taskCompletionSource.setError(exception);
+			}
+		});
+		return taskCompletionSource.getTask();
+	}
+	public Task<Object> updateItemAsync(UpdateItemRequest request){
+		TaskCompletionSource<Object> taskCompletionSource = new TaskCompletionSource<>();
+		dynamoDB.updateItemAsync(request, new AsyncHandler<UpdateItemRequest,UpdateItemResult>(){
+			public void onSuccess(UpdateItemRequest updateItemRequest,UpdateItemResult updateItemResult){
+				System.out.println("task success!!");
+				taskCompletionSource.setResult(null);			
+			}
+			public void onError(Exception exception){
+				System.out.println("task doomed!!");
+
+				taskCompletionSource.setError(exception);
+			}
+		});
+		return taskCompletionSource.getTask();
+	}
+	public Task<Object> deleteItemAsync(DeleteItemRequest request){
+		TaskCompletionSource<Object> taskCompletionSource = new TaskCompletionSource<>();
+		dynamoDB.deleteItemAsync(request, new AsyncHandler<DeleteItemRequest,DeleteItemResult>(){
+			public void onSuccess(DeleteItemRequest deleteItemRequest,DeleteItemResult deleteItemResult){
+				System.out.println("task success!!");
+				taskCompletionSource.setResult(null);			
+			}
+			public void onError(Exception exception){
+				System.out.println("task doomed!!");
+
+				taskCompletionSource.setError(exception);
+			}
+		});
+		return taskCompletionSource.getTask();
 	}
 	public Task<CollectionWrapper<ItemV2>> Query(String tabName,Object hashkey,Object sortkey,Op op){
 		 //Task<Collection<ItemV2>> results = null;

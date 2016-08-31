@@ -1,5 +1,4 @@
 package com.BoBiHealth.Check;
-
 import java.math.BigDecimal;
 import java.util.*;
 
@@ -117,7 +116,7 @@ public class checkingManager extends Thread {
 		if(min<10) mString = "0"+mString;
 		return hString+":"+mString;
 	}
-	private String appointTabName(String email){
+	public static String appointTabName(String email){
 		String extract = "";
 		final int length = email.length();
 		for(int i=0;i<length;i++){

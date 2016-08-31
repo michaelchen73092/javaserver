@@ -1,4 +1,4 @@
-package com.BoBiHealth;
+package com.BoBiHealth.Servlet;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Phaser;

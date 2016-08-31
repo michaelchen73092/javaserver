@@ -1,8 +1,11 @@
-package com.BoBiHealth;
+package com.BoBiHealth.Servlet;
+
 import com.amazonaws.metrics.AwsSdkMetrics;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.ItemCollection;
 import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
+import com.amazonaws.services.dynamodbv2.local.shared.model.AttributeValue;
+
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.auth.AWSCredentialsProvider;
 
@@ -20,6 +23,8 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import com.BoBiHealth.dynamoDB.*;
+import com.BoBiHealth.*;
+import com.BoBiHealth.Check.*;
 
 public class TestThread {
 	public static Integer[] test_count = null;
@@ -71,11 +76,22 @@ public class TestThread {
 		System.out.println("sample token: "+TokenUtil.sanitizeTokenString("<efc7492 bdbd8209>"));
 		testThread(job);
 		System.out.println("the end");*/
+		TimeZoneID timeZoneID = TimeZoneID.instance;
+		AttributeValue attr1 = new AttributeValue();
+		Collection<AttributeValue> coll = new ArrayList<AttributeValue>();
+		coll.add((new AttributeValue()).withS("test1"));
+		coll.add((new AttributeValue()).withS("test2"));
+		attr1.setL(coll);
+		System.out.printf("AttritubeValue's String:%s\n",attr1.toString());
+		HashSet<Integer> set = new HashSet<>();
+		System.out.printf("current directory:%s\n", System.getProperty("user.dir"));
+		AttributeValue attr2 = new AttributeValue(attr1.toString());
+		System.out.printf("the passed:%s\n",attr2.toString());
+		List<AttributeValue> test_list = attr2.getL();
+		//System.out.printf("first:%s",test_list.get(0).getS());
+		//System.out.printf("second:%s",test_list.get(1).getS());
 		counter th1 = new counter("thread1");
 		counter th2 = new counter("thread2");
-		Calendar date = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-		System.out.printf("first:%d\n",date.getTimeInMillis());
-		System.out.printf("second:%d\n",date.getTime().getTime());
 		System.out.printf("wall time%d\n", System.currentTimeMillis());
 		Task<Object> task = dynamoDBManager.instance().Query("APNs", "zero064@gmail.com", null, Op.eq).continueWithTask(new Continuation<CollectionWrapper<ItemV2>, Task<Object>>(){
 			public Task<Object> then(Task<CollectionWrapper<ItemV2>> task)throws Exception{

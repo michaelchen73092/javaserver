@@ -1,10 +1,10 @@
 package com.BoBiHealth.dynamoDB;
 
 public enum Type {
-	Int{
+	Number{
 		@Override
 		public String rawValue(){
-			return "Int";
+			return "Number";
 		}
 	},Int32{
 		@Override

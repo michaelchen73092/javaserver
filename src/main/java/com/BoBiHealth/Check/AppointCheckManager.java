@@ -5,8 +5,9 @@ public class AppointCheckManager extends TimerTask{
 	//public final static AppointCheckManager instance = new AppointCheckManager();
 	private static HashMap<String,appointDelegate[]> appointQueue;
 	private static int test=3;
-	public static void addAppoint(String doctor,appointDelegate[] pipe){
+	public static void addAppoint(String doctor){
 		synchronized (appointQueue) {
+			appointDelegate[] pipe = doctorAssistance.assistanceMap.get(doctor);
 			appointQueue.put(doctor, pipe);
 		}
 	}
@@ -15,7 +16,12 @@ public class AppointCheckManager extends TimerTask{
 			appointQueue.remove(doctor);
 		}
 	}
+	public static void start(){
+		Timer timer = new Timer();
+		timer.schedule(new AppointCheckManager(),2,900000);
+	}
 	public void run(){
-		System.out.println(AppointCheckManager.test);
+		checkingManager job = new checkingManager(appointQueue.values());
+		job.start();
 	}
 }
