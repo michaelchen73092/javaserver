@@ -36,11 +36,18 @@ public class TestThread {
 				try{
 					counting();
 				}catch(InterruptedException exception){
+					System.out.println("Get Interrupted!!");
+					try{
+						counting();
+					}catch(InterruptedException exception2){
+						return;
+					}
 					return;
 				}
 			}
 		}
 		private void counting()throws InterruptedException{
+			System.out.println("Enter counting process");
 			synchronized (lock) {
 				System.out.printf("%s: %d\n",this.threadName,lock[0]++);
 				Thread.sleep(20);
@@ -78,7 +85,7 @@ public class TestThread {
 		System.out.println("the end");*/
 		TimeZoneID timeZoneID = TimeZoneID.instance;
 		AttributeValue attr1 = new AttributeValue();
-		Collection<AttributeValue> coll = new ArrayList<AttributeValue>();
+		/*Collection<AttributeValue> coll = new ArrayList<AttributeValue>();
 		coll.add((new AttributeValue()).withS("test1"));
 		coll.add((new AttributeValue()).withS("test2"));
 		attr1.setL(coll);
@@ -87,11 +94,14 @@ public class TestThread {
 		System.out.printf("current directory:%s\n", System.getProperty("user.dir"));
 		AttributeValue attr2 = new AttributeValue(attr1.toString());
 		System.out.printf("the passed:%s\n",attr2.toString());
-		List<AttributeValue> test_list = attr2.getL();
+		List<AttributeValue> test_list = attr2.getL();*/
 		//System.out.printf("first:%s",test_list.get(0).getS());
 		//System.out.printf("second:%s",test_list.get(1).getS());
 		counter th1 = new counter("thread1");
 		counter th2 = new counter("thread2");
+		th1.start();
+		Thread.sleep(5000);
+		th1.interrupt();
 		System.out.printf("wall time%d\n", System.currentTimeMillis());
 		Task<Object> task = dynamoDBManager.instance().Query("APNs", "zero064@gmail.com", null, Op.eq).continueWithTask(new Continuation<CollectionWrapper<ItemV2>, Task<Object>>(){
 			public Task<Object> then(Task<CollectionWrapper<ItemV2>> task)throws Exception{

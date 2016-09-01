@@ -132,7 +132,7 @@ public  class addAppointSevlet extends HttpServlet
         	BigDecimal year = new BigDecimal(date.get(Calendar.YEAR));
         	String tabName = "Appointment";
         	String time_info = String.format("%02d", date.get(Calendar.HOUR_OF_DAY))+":"+String.format("%02d", date.get(Calendar.MINUTE));
-        	key_map.put("timezone_id", hashkey);
+        	key_map.put("timezone_ID", hashkey);
         	key_map.put("day",sortkey);
         	Map<String, Object> value_map = new HashMap<>();
         	Map<String, Collection<String>> time_map = new HashMap<>();

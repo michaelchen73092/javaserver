@@ -18,6 +18,7 @@ import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.model.*;
 import java.util.*;
 import java.util.concurrent.*;
+import com.BoBiHealth.Servlet.TimeZoneID;
 import bolts.*;;
 
 
@@ -84,8 +85,79 @@ public class dynamoDBManager {
 			System.out.printf("convert to Number %s\n",attributeValue.toString());
 
 		}
+		TimeZoneID timeZoneID = TimeZoneID.instance;
+		for(BigDecimal offset:timeZoneID.id_map){
+			List<PutItemRequest> list = new java.util.ArrayList<>();
+			for(int i=1;i<32;i++){
+				PutItemRequest request = new PutItemRequest();
+				Map<String, Object> key_map = new HashMap<>();
+				key_map.put("timezone_ID", offset.toString());
+				key_map.put("day", new BigDecimal(i));
+				key_map.put("month", new BigDecimal(9));
+				key_map.put("year", new BigDecimal(2016));
+				key_map.put("time", new HashMap<>());
+				request.withTableName("Appointment");
+				request.withItem((new ItemV2(key_map)).toAttributeValueMap());
+				list.add(request);
+			}
+			/*try{
+				dynamoDBManager.instance().BatchputItemAsync(list, 100);
+			}catch(InterruptedException e){
+				return;
+			}*/
+		}
+
 	}
-	
+	public void createTableAsync(String tabName,String hashkey,String hashtype,String sortkey,String sorttype){
+		CreateTableRequest request = new CreateTableRequest();
+		HashSet<AttributeDefinition> attr_set = new HashSet<>();
+		attr_set.add((new AttributeDefinition()).withAttributeName(hashkey).withAttributeType(hashtype));
+		if(sortkey != null)attr_set.add((new AttributeDefinition()).withAttributeName(sortkey).withAttributeType(sorttype));
+		ArrayList<KeySchemaElement> keydef_set = new ArrayList<>();
+		keydef_set.add((new KeySchemaElement()).withAttributeName(hashkey).withKeyType(KeyType.HASH));
+		if(sortkey != null) keydef_set.add((new KeySchemaElement()).withAttributeName(sorttype).withKeyType(KeyType.RANGE));
+		request.setAttributeDefinitions(attr_set);
+		request.setKeySchema(keydef_set);
+		request.setTableName(tabName);
+		request.withProvisionedThroughput((new ProvisionedThroughput()).withReadCapacityUnits(new Long(5)).withWriteCapacityUnits(new Long(5)));
+		Task<Object> task = dynamoDBManager.instance().createTableAsync(request);
+		try{
+			task.waitForCompletion();
+		}catch(InterruptedException exception){
+			return;
+		}
+		if(task.isFaulted()){
+			Exception exception = task.getError();
+			System.out.println(exception.getMessage());
+		}else{
+			System.out.println("create table!!");
+		}
+	}
+	public Task<Void> BatchputItemAsync(Collection<PutItemRequest> collection,long delay) throws InterruptedException{
+		List<Task<Object>> list = new ArrayList<>();
+		for(PutItemRequest item:collection){
+			list.add(putItemAsync(item));
+			if(delay>0){
+				Thread.sleep(delay);
+			}
+		}
+		return Task.whenAll(list);
+	}
+	public Task<Object> putItemAsync(PutItemRequest request){
+		TaskCompletionSource<Object> taskCompletionSource = new TaskCompletionSource<>();
+		dynamoDB.putItemAsync(request, new AsyncHandler<PutItemRequest,PutItemResult>(){
+			public void onSuccess(PutItemRequest puItemRequest,PutItemResult putItemResult){
+				System.out.println("task success!!");
+				taskCompletionSource.setResult(null);			
+			}
+			public void onError(Exception exception){
+				System.out.println("task doomed!!");
+				System.out.println(exception.getMessage());
+				taskCompletionSource.setError(exception);
+			}
+		});
+		return taskCompletionSource.getTask();
+	}
 	public String operationBi(String left,Op op,Object right,Type type,Map<String,String> dictName,Map<String,AttributeValue> dictValue){
 		if(dictName==null || dictValue==null ){
 			logger.error("error!");
@@ -183,6 +255,21 @@ public class dynamoDBManager {
 		TaskCompletionSource<Object> taskCompletionSource = new TaskCompletionSource<>();
 		dynamoDB.updateItemAsync(request, new AsyncHandler<UpdateItemRequest,UpdateItemResult>(){
 			public void onSuccess(UpdateItemRequest updateItemRequest,UpdateItemResult updateItemResult){
+				System.out.println("task success!!");
+				taskCompletionSource.setResult(null);			
+			}
+			public void onError(Exception exception){
+				System.out.println("task doomed!!");
+
+				taskCompletionSource.setError(exception);
+			}
+		});
+		return taskCompletionSource.getTask();
+	}
+	public Task<Object> createTableAsync(CreateTableRequest request){
+		TaskCompletionSource<Object> taskCompletionSource = new TaskCompletionSource<>();
+		dynamoDB.createTableAsync(request, new AsyncHandler<CreateTableRequest,CreateTableResult>(){
+			public void onSuccess(CreateTableRequest createTableRequest,CreateTableResult createTableResult){
 				System.out.println("task success!!");
 				taskCompletionSource.setResult(null);			
 			}

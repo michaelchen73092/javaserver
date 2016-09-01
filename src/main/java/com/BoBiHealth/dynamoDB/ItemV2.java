@@ -215,7 +215,7 @@ public class ItemV2 extends JSONObject{
 			AttributeValueUpdate result = new AttributeValueUpdate();
 			result.setAction(action);
 			String key = keys.next();
-			result.setValue(toAttributeValue(super.getJSONArray(key)));
+			result.setValue(toAttributeValue((JSONArray)super.get(key)));
 			map.put(key, result);
 		}
 		return map;
@@ -224,9 +224,10 @@ public class ItemV2 extends JSONObject{
 		Iterator<String> keys = keys();
 		Map<String, AttributeValue> map = new HashMap<String, AttributeValue>();
 		while(keys.hasNext()){
-			AttributeValueUpdate result = new AttributeValueUpdate();
 			String key = keys.next();
-			map.put(key, toAttributeValue(super.getJSONArray(key)));
+			Object retrun_value = super.get(key);
+			System.out.printf("%s:%s\n",key,retrun_value.getClass().getName());
+			map.put(key, toAttributeValue((JSONArray)retrun_value));
 		}
 		return map;
 	}

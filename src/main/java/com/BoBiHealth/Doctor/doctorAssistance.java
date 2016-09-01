@@ -194,13 +194,19 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 	public void endCall(){
 		worker[0].endCall();
 	}
-	public void turnOffline()throws InterruptedException{
+
+	//inform doctor that he turn offline and expell the pointer to worker
+	public void turnOffline(boolean endbyDoctor)throws InterruptedException{
 		synchronized (worker) {
 			synchronized (is_online) {
 				String hashkey = (String)this.doctor.get("email"); 
 		    	final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
 			    if(is_online[0]){
-			    	payloadBuilder.setAlertBody(worker[0].message.informDoctorOutConnectionOffline());
+			    	if(endbyDoctor){
+			    		payloadBuilder.setAlertBody(worker[0].message.endInterview());
+			    	}else{
+			    		payloadBuilder.setAlertBody(worker[0].message.informDoctorOutConnectionOffline());
+			    	}
 			    	is_online[0] = false;
 			    	DeleteItemRequest request = new DeleteItemRequest();
 			    	Map<String, Object> key_map = new HashMap<>();
@@ -214,7 +220,6 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 			    payloadBuilder.setSoundFileName("default");
 			    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
 			    worker[0].fetchAPNsAndsendNotification((String)this.doctor.get("email"), payload);
-				is_online[0] = false;
 			}
 			removeTask();
 			worker[0] = null;
@@ -244,20 +249,29 @@ class onWorking extends Thread{
 	private doctorStatusDelegate supervisor;
 	private BigInteger[] hearBeat;
 	private boolean[] call_is_end;
+	private boolean[] endInterview;
 
 	public void run(){
 		while(true){
 			try{
-				checkQueue();
-				informPatient();
-				boolean inform_success = informDoctor();
-				if(inform_success){
-					if(!checkHearBeat()){
-						expellQueue();
+				if(checkQueue()){
+					informPatient();
+					boolean inform_success = informDoctor();
+					if(inform_success){
+						if(!checkHearBeat()){
+							expellQueue(false);
+							return;
+						}
+					}else{
+						boolean endbyDoctor;
+						synchronized (endInterview) {
+							endbyDoctor = endInterview[0];
+						}
+						expellQueue(endbyDoctor);
 						return;
 					}
 				}else{
-					expellQueue();
+					expellQueue(true);
 					return;
 				}
 			}catch(InterruptedException exception){
@@ -271,6 +285,7 @@ class onWorking extends Thread{
 	}
 
 	private boolean checkQueue()throws InterruptedException{
+		int limit = 60;
 		while(true){
 			synchronized (request_queue) {
 				if(request_queue.size() > 0 ){
@@ -278,7 +293,13 @@ class onWorking extends Thread{
 				}
 			}
 			if(current_patient == null){
-				Thread.sleep(60000);
+				int count = 0;
+				while(count++ < limit){
+					synchronized (endInterview) {
+						if(endInterview[0]) return false;
+					}
+					Thread.sleep(1000);
+				}
 
 			}else{
 				return true;
@@ -312,6 +333,12 @@ class onWorking extends Thread{
 				}
 			}
 		}
+	}
+	public void endInterview(){
+		synchronized (endInterview) {
+			endInterview[0] = true;
+		}
+		return;
 	}
 	private void informPatient() throws InterruptedException{
 		ItemV2 buffer = current_patient;
@@ -377,6 +404,9 @@ class onWorking extends Thread{
 			int count_taken = 0;
 			fetchAPNsAndsendNotification(hashkey, payload);
 			while(count_taken++ < taken_check){
+				synchronized (endInterview) {
+					if(endInterview[0]) return false;
+				}
 				Thread.sleep(200);
 				if(supervisor.taken()){
 					return true;
@@ -457,7 +487,7 @@ class onWorking extends Thread{
 		}
 	}
 	//expell all patien in the queue
-	public void expellQueue()throws InterruptedException{
+	public void expellQueue(boolean endbyDoctor)throws InterruptedException{
 		supervisor.lockQueue();
 		ItemV2 nextOne = current_patient;
 		this.current_patient = null;
@@ -467,11 +497,13 @@ class onWorking extends Thread{
 		// = dynamoDB_inst.Query(tabName,hashkey,sortKey, Op.eq);
 		Task<CollectionWrapper<ItemV2>> task;
 		synchronized (request_queue) {
-			supervisor.turnOffline();
+			supervisor.turnOffline(endbyDoctor);
 			do{
 				hashkey = (String)nextOne.get("email"); 
 		    	final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
-			    payloadBuilder.setAlertBody(message.informPatienLeave(nextOne.getString("firstname"), nextOne.getString("lastname")));
+
+		    	payloadBuilder.setAlertBody(message.informPatienLeave(endbyDoctor,nextOne.getString("firstname"), nextOne.getString("lastname")));
+
 			    payloadBuilder.setBadgeNumber(1);
 			    payloadBuilder.setSoundFileName("default");
 			    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
@@ -493,6 +525,7 @@ class onWorking extends Thread{
 		this.call_is_end = new boolean[1];
 		this.message = new messageGenerator(true, doctor);
 		this.hearBeat = new BigInteger[1];
+		this.endInterview = new boolean[1];
 		dynamoDBManager dynamoDB_inst = dynamoDBManager.instance();
 		try{
 		this.apnsClient = new ApnsClient<SimpleApnsPushNotification>(

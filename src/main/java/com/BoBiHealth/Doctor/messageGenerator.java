@@ -10,9 +10,13 @@ public class messageGenerator {
 		result += target.getString("firstname")+target.getString("lastname")+",you got a patient";
 		return result;
 	}
-	public String informPatienLeave(String firstname,String lastname){
+	public String informPatienLeave(boolean endbyDoctor,String firstname,String lastname){
 		String result = "#2:";
-		result += firstname +" "+lastname+",the doctor can not be connected.\nPlease stop waiting";
+		if(endbyDoctor){
+			result += firstname +" "+lastname+",the doctor just left.\nPlease stop waiting";
+		}else{
+			result += firstname +" "+lastname+",the doctor can not be connected.\nPlease stop waiting";
+		}
 		return result;
 	}
 	public String informDoctorOutConnectionOffline(){
@@ -23,6 +27,11 @@ public class messageGenerator {
 	public String informDoctorOutConnection(){
 		String result = "#3:";
 		result += "You're out of connection too long, all your patiens in wait list left\n";
+		return result;
+	}
+	public String endInterview(){
+		String result = "#3:";
+		result += "You've turned offline, all your patiens in wait list left\n";
 		return result;
 	}
 	public messageGenerator(boolean isDoctor,JSONObject target){
