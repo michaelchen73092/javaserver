@@ -16,6 +16,11 @@ import java.math.*;
 @SuppressWarnings("serial")
 public  class addAppointSevlet extends HttpServlet
 {
+    //The request Item's format:
+    //doctor: the item for doctor's information
+    //value: the item for the appointment information except day and time
+    //key: the item including day and time for appointment 
+	private Object appoint_lock = new Integer(0);
     @Override
     protected void doGet( HttpServletRequest request,
                           HttpServletResponse response ) throws ServletException,
@@ -160,6 +165,8 @@ public  class addAppointSevlet extends HttpServlet
     	}
     	
     }
+    //add or remove  appointment time slot information to or from Appointment table
+    //this function is used only when patients take all available opening or release one
     private void modifyAppoint_table(ItemV2 item,AttributeAction action){
     	ItemV2 value = (ItemV2) item.get("value");
     	ItemV2 doctor = (ItemV2) item.get("doctor");
@@ -192,7 +199,8 @@ public  class addAppointSevlet extends HttpServlet
     	return;
     }
     private Task<Object> updateAppoint(ItemV2 item,BigDecimal year,BigDecimal month,String tabName,Map<String,Object>key_map,Map<String, Object>value_map){
-			BigDecimal returned_month = (BigDecimal)item.get("month");
+			//item is the query result for appoinment table
+    		BigDecimal returned_month = (BigDecimal)item.get("month");
 			BigDecimal returned_year = (BigDecimal) item.get("year");
 			UpdateItemRequest request = new UpdateItemRequest();
 			request.withKey((new ItemV2(key_map)).toAttributeValueMap());
@@ -201,12 +209,42 @@ public  class addAppointSevlet extends HttpServlet
 				Map<String, AttributeValueUpdate> attrs = (new ItemV2(value_map)).toAttributeValueUpdate(AttributeAction.ADD);
 				request.setAttributeUpdates(attrs);
 			}else{
-				value_map.put("month", month);
-				value_map.put("year", year);
-				Map<String, AttributeValueUpdate> attrs = (new ItemV2(value_map)).toAttributeValueUpdate(AttributeAction.PUT);
+				appointmentExpiredManager(key_map, year, month, returned_year, returned_month);
+				Map<String, AttributeValueUpdate> attrs = (new ItemV2(value_map)).toAttributeValueUpdate(AttributeAction.ADD);
 				request.setAttributeUpdates(attrs);
 			}
 			return dynamoDBManager.instance().updateItemAsync(request);
+    }
+    //this function erase the expired content in appointment table by put a new item into it
+    private boolean appointmentExpiredManager(Map<String, Object> key_map,BigDecimal year,BigDecimal month,BigDecimal oldyear,BigDecimal oldmonth){
+	    	UpdateItemRequest request = new UpdateItemRequest();
+	    	Map<String, Object> value_map = new HashMap<>();
+	    	request.withKey((new ItemV2(key_map)).toAttributeValueMap());
+			request.withTableName("Appointment");
+			value_map.put("month", month);
+			value_map.put("year", year);
+			Map<String, AttributeValueUpdate> attrs = (new ItemV2(value_map)).toAttributeValueUpdate(AttributeAction.PUT);
+			AttributeValueUpdate time = new AttributeValueUpdate();
+			time.setAction(AttributeAction.PUT);
+			time.setValue((new AttributeValue()).withSS(new HashSet<String>()));
+			attrs.put("time", time);
+			request.setAttributeUpdates(attrs);
+			Map<String, String> dict_name = new HashMap<>();
+			Map<String, AttributeValue> dict_value = new HashMap<>();
+			String conditionalExp1 = dynamoDBManager.instance().operationBi("month", Op.eq, oldmonth, Type.Number, dict_name, dict_value);
+			String conditionalExp2 = dynamoDBManager.instance().operationBi("year", Op.eq, oldyear, Type.Number, dict_name, dict_value);
+			request.withConditionExpression(conditionalExp1+" AND "+conditionalExp2);
+			request.setExpressionAttributeNames(dict_name);
+			request.setExpressionAttributeValues(dict_value);
+			Task<Object> task = dynamoDBManager.instance().updateItemAsync(request);
+			try{
+				task.waitForCompletion();
+			}catch(InterruptedException exception){
+				return false;
+			}
+			if(task.isFaulted()) return false;
+			return true;
+
     }
     private Calendar setDate(ItemV2 item){
     	ItemV2 value = (ItemV2) item.get("value");

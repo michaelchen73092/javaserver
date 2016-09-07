@@ -207,7 +207,7 @@ public class ItemV2 extends JSONObject{
 			return null;
 		}
 	}
-	
+
 	public Map<String, AttributeValueUpdate> toAttributeValueUpdate(AttributeAction action){
 		Iterator<String> keys = keys();
 		Map<String, AttributeValueUpdate> map = new HashMap<String, AttributeValueUpdate>();

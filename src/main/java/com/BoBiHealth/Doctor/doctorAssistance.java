@@ -19,12 +19,14 @@ import bolts.*;
 import io.netty.util.concurrent.Future;
 import com.BoBiHealth.dynamoDB.*;
 import com.BoBiHealth.Check.*;
+//is_appoinment in ItemV2 is to used to check whether the patient is appoinment patient
 public class doctorAssistance extends Thread implements appointDelegate,doctorStatusDelegate{
 	public static HashMap<String, doctorAssistance[]> assistanceMap = new HashMap<String, doctorAssistance[]>();
 	private ArrayList<ItemV2> request_queue; 
 	private boolean[] que_lock = new boolean[1] ;
 	public static Integer testInt = new Integer(3);
 	private doctorAssistance[] access;
+	//lock set order: worker,is_online
 	private onWorking[] worker;
 	private boolean[] is_online;
 	private int[] task_count;
@@ -88,9 +90,45 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 			}
 		}
 	}
+	//item includes a appointment queue.
+	//only email and order is reserved in the queue.
+	//This function fetch patient information from Persons and add it to queue
 	public void addAppointToQueue(ItemV2 item){
+		List<JSONArray> queue = (List<JSONArray>) item.get("queue");
+		List<ItemV2> buffer_queue = new java.util.ArrayList<>(queue.size());
+		List<Task<Object>> task_arry = new java.util.ArrayList<>();
+		for(int i=0,length=queue.size();i<length;i++){
+			JSONArray arry = queue.get(i);
+			Task<CollectionWrapper<ItemV2>> querytask = dynamoDBManager.instance().Query("PersonsPublic",(String)arry.get(1), null, Op.eq);
+			TaskCompletionSource<Object> taskCompletionSource = new TaskCompletionSource<>();
+			final int i_special = i;
+			querytask.continueWith(new Continuation<CollectionWrapper<ItemV2>, Void>(){
+				public Void then(Task<CollectionWrapper<ItemV2>> task)throws Exception{
+					if(task.isFaulted()){
+						taskCompletionSource.setError(task.getError());
+					}else{
+						Iterator<ItemV2> iterator = task.getResult().iterator();
+						while (iterator.hasNext()) {
+							ItemV2 patient = iterator.next();
+							patient.store("is_appointment", new Boolean(true));
+							buffer_queue.add(i_special, patient);;
+							
+						}
+						taskCompletionSource.setResult(null);
+					}
+					return null;
+				}
+			});
+			task_arry.add(taskCompletionSource.getTask());
+		}
+		Task<Void> total_task = Task.whenAll(task_arry);
+		try{
+			total_task.waitForCompletion();
+		}catch(InterruptedException exception){
+			return;
+		}
 		synchronized (request_queue) {
-			request_queue.add(item);
+			request_queue.addAll(buffer_queue);
 			synchronized (worker) {
 				if(worker[0] == null){
 					worker[0] = new onWorking(this.request_queue,this,this.doctor);
@@ -194,7 +232,40 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 	public void endCall(){
 		worker[0].endCall();
 	}
-
+	//item's format(information type)
+	//turn doctor's status to online, and set the openings number
+	//add doctor to onlineDoctors table
+	//item-ItemV2 doctor
+	//    -....othre attributes
+	public void turnOnline(ItemV2 item){
+		BigDecimal num = (BigDecimal) item.get("openings");
+		synchronized (worker) {
+			synchronized (is_online) {
+				if(worker[0] == null){
+					worker[0] = new onWorking(this.request_queue,this,this.doctor);
+					worker[0].start();
+					addTask();
+					worker[0].modifyOpeings(num);
+				}
+				is_online[0] = true;
+			}
+		}
+		ItemV2 doctor = (ItemV2)item.get("doctor");
+		PutItemRequest putItemRequest = new PutItemRequest();
+		putItemRequest.withItem(doctor.toAttributeValueMap());
+		putItemRequest.withTableName("onlineDoctors");
+		Task<Object> returned_task = dynamoDBManager.instance().putItemAsync(putItemRequest);
+		returned_task.continueWith(new Continuation<Object, Void>(){
+			public Void then(Task<Object> task) throws Exception{
+				if (task.isFaulted()) {
+					System.out.println("Error");
+				}else{
+					
+				}
+				return null;
+			}
+		});
+	}
 	//inform doctor that he turn offline and expell the pointer to worker
 	public void turnOffline(boolean endbyDoctor)throws InterruptedException{
 		synchronized (worker) {
@@ -226,6 +297,12 @@ public class doctorAssistance extends Thread implements appointDelegate,doctorSt
 		}
 
 	}
+	public boolean modifyOpenings(BigDecimal num){
+		return worker[0].modifyOpeings(num);
+	}
+	public boolean addOnlinePatient(ItemV2 patient){
+		return worker[0].addOnlinePatient(patient);
+	}
 	public void lockQueue(){
 		synchronized (que_lock) {
 			que_lock[0] = true;
@@ -250,7 +327,9 @@ class onWorking extends Thread{
 	private BigInteger[] hearBeat;
 	private boolean[] call_is_end;
 	private boolean[] endInterview;
-
+	//lock set order:openings, registration
+	private int[] openings;
+	private int[] registrations;
 	public void run(){
 		while(true){
 			try{
@@ -283,7 +362,9 @@ class onWorking extends Thread{
 	public void endCall(){
 		call_is_end[0] = true;
 	}
-
+	//routinely check whether new patient come into the queue
+	//if there is, move it to current_patient spot
+	//also check whether doctor want to end this interview
 	private boolean checkQueue()throws InterruptedException{
 		int limit = 60;
 		while(true){
@@ -302,7 +383,36 @@ class onWorking extends Thread{
 				}
 
 			}else{
-				return true;
+				//check whther current_patient is appoinment patient, 
+				//if not, decrease registration[0]
+				//when registration[0] == (openings[0]-1), put the doctor information to onlineDoctors
+				Boolean flag = (Boolean) current_patient.get("is_appointment");
+				if(flag.booleanValue()){
+					return true;
+				}else{
+					synchronized (openings) {
+						synchronized (registrations) {
+							registrations[0]--;
+							if(registrations[0] == (openings[0]-1)){
+								PutItemRequest putItemRequest = new PutItemRequest();
+								putItemRequest.withItem(doctor.toAttributeValueMap());
+								putItemRequest.withTableName("onlineDoctors");
+								Task<Object> returned_task = dynamoDBManager.instance().putItemAsync(putItemRequest);
+								returned_task.continueWith(new Continuation<Object, Void>(){
+									public Void then(Task<Object> task) throws Exception{
+										if (task.isFaulted()) {
+											System.out.println("Error");
+										}else{
+											
+										}
+										return null;
+									}
+								});
+								
+							}
+						}
+					}
+				}
 			}
 			
 		}
@@ -486,6 +596,47 @@ class onWorking extends Thread{
 			//Thread.sleep(2000);
 		}
 	}
+	public boolean modifyOpeings(BigDecimal num){
+		synchronized (openings) {
+			this.openings[0] = num.intValue();
+		}
+		return true;
+	}
+	//add unappointment patient to the queue, the the number of the unappointment reaches the threshold
+	//remove doctor from onlineDoctors
+	public boolean addOnlinePatient(ItemV2 patient){
+		synchronized (openings) {
+			synchronized (registrations) {
+				if(registrations[0]<openings[0]){
+					synchronized (request_queue) {
+						patient.store("is_appointment", new Boolean(false));
+						request_queue.add(patient);
+					}
+					registrations[0]++;
+					if(registrations[0]==openings[0]){
+						DeleteItemRequest deleteItemRequest = new DeleteItemRequest();
+						Map<String, Object> key_map = new java.util.HashMap<>();
+						key_map.put("email", (String) doctor.get("email"));
+						deleteItemRequest.withKey((new ItemV2(key_map)).toAttributeValueMap());
+						Task<Object> returned_task = dynamoDBManager.instance().deleteItemAsync(deleteItemRequest);
+						returned_task.continueWith(new Continuation<Object, Void>(){
+							public Void then(Task<Object> task) throws Exception{
+								if(task.isFaulted()){
+									System.out.println("Error!!");
+								}else{
+									
+								}
+								return null;
+							}
+						});
+					}
+					return true;
+				}else{
+					return false;
+				}
+			}
+		}
+	}
 	//expell all patien in the queue
 	public void expellQueue(boolean endbyDoctor)throws InterruptedException{
 		supervisor.lockQueue();
@@ -526,6 +677,8 @@ class onWorking extends Thread{
 		this.message = new messageGenerator(true, doctor);
 		this.hearBeat = new BigInteger[1];
 		this.endInterview = new boolean[1];
+		this.openings = new int[1];
+		this.registrations = new int[1];
 		dynamoDBManager dynamoDB_inst = dynamoDBManager.instance();
 		try{
 		this.apnsClient = new ApnsClient<SimpleApnsPushNotification>(
