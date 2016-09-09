@@ -2,6 +2,11 @@ package com.BoBiHealth.Doctor;
 import java.util.*;
 import org.json.*;
 public class messageGenerator {
+	//#1:inform doctor he got a patient
+	//#2:inform patient that doctor is missing
+	//#3:inform doctor, his waitlist is cleared
+	//#4:improm patient their number in the waitlist
+	//#5:inform doctor to refresh the waitlist
 	//true: doctor, false: user
 	private boolean isDoctor;
 	private JSONObject target;

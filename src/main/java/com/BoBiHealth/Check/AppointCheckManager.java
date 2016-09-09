@@ -3,7 +3,7 @@ import java.util.*;
 import com.BoBiHealth.Doctor.*;
 public class AppointCheckManager extends TimerTask{
 	//public final static AppointCheckManager instance = new AppointCheckManager();
-	private static HashMap<String,appointDelegate[]> appointQueue;
+	private static volatile HashMap<String,appointDelegate[]> appointQueue;
 	private static int test=3;
 	public static void addAppoint(String doctor){
 		synchronized (appointQueue) {

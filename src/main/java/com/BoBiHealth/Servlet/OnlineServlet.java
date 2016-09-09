@@ -25,17 +25,47 @@ public  class OnlineServlet extends HttpServlet
                                                         IOException
     {
     	String doctor = request.getParameter("doctor");
- 
 	    System.out.printf("method: %s\n", request.getMethod());
         System.out.printf("PathInfo: %s\n",request.getPathInfo());
     	System.out.println("get called");
+    	String pathinfo = request.getPathInfo();
+    	switch (pathinfo) {
+		case "addAppoint":
+			addAppointment(doctor, response);
+			break;
+		case "waitlist":
+			fetchWaitlist(doctor, response);
+			break;
+		default:
+			break;
+		}
+
+		
+    
+    }
+    //add this doctor to AppointCheckManager's list
+    public void addAppointment(String doctor,HttpServletResponse response)throws ServletException,
+    IOException
+    {
         AppointCheckManager.addAppoint(doctor);
     	response.setContentType("text/html");
         response.setStatus(HttpServletResponse.SC_OK);
         response.getWriter().println("<h1>Hello from HelloServlet</h1>");
         if(doctor != null)response.getWriter().printf("<h2>%s</h2>",doctor);
-		
-    
+    }
+    //append this doctor's waitlist to response
+    public void fetchWaitlist(String doctor,HttpServletResponse response)throws ServletException,IOException{
+    	doctorAssistance[] pipe = doctorAssistance.assistanceMap.get(doctor);
+		ItemV2 result;
+    	if(pipe != null){
+    		result = pipe[0].fetchWaitlist();
+        	response.setContentType("application/json");
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.getWriter().println(result.String());
+    	}else{
+        	response.setContentType("application/json");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    	}
     }
     //item's format(information type)
   	//all information scatter in item. besides that, there's a item called doctor including all doctor's information

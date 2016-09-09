@@ -25,6 +25,9 @@ public class ItemV2 extends JSONObject{
 		//System.out.printf("this string:%s\n",toString());
 		//System.out.printf("super string:%s\n", super.toString());
 	}
+	public ItemV2(){
+		
+	}
 	public JSONObject getJSONObject(){
 		return this;
 	}
@@ -69,12 +72,7 @@ public class ItemV2 extends JSONObject{
 
 	}
 	
-	@Override
-	public JSONObject put(String key, double value){
-		BigDecimal numb = new BigDecimal(value);
-		super.put(key, numb);
-		return this;
-	}
+
 	
 	@Override
 	public JSONObject put(String key, Object value){
@@ -89,6 +87,8 @@ public class ItemV2 extends JSONObject{
 		
 		return this;
 	}
+	//Convert number in JSONarry to BigDecimal type
+	//it is used when contruct ItemV2 from String
 	private void selfParse(JSONArray value1){
 		if(value1.length()>0){
 			Object type = value1.get(0);
@@ -118,7 +118,12 @@ public class ItemV2 extends JSONObject{
 					break;
 				case "Map":
 					JSONObject jsonObject = value1.getJSONObject(1);
-					ItemV2 new_item = new ItemV2(jsonObject.toString());
+					ItemV2 new_item;
+					if(!(jsonObject instanceof ItemV2)){
+						new_item = new ItemV2(jsonObject.toString());
+					}else{
+						new_item = (ItemV2) jsonObject;
+					}
 					value1.put(1,new_item);
 					break;
 				case "List":
@@ -142,7 +147,7 @@ public class ItemV2 extends JSONObject{
 
 	}
 	
-	
+	//Parse the object's type, and convert it to a suitable type in ItemV2
 	private JSONArray transForm(Object value){
 		JSONArray jsonArray = new JSONArray();
 
@@ -201,6 +206,12 @@ public class ItemV2 extends JSONObject{
 			System.out.printf("convert to Number %s\n",value.toString());
 			jsonArray.put("Number");
 			jsonArray.put(value);
+			return jsonArray;
+		}else if(value instanceof ItemV2){
+			ItemV2 item_buff =(ItemV2) value;
+			System.out.println("No convert need");
+			jsonArray.put("Map");
+			jsonArray.put(item_buff);
 			return jsonArray;
 		}else{
 			System.out.println("unresolved typde");
